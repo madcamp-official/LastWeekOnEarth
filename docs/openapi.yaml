@@ -267,10 +267,43 @@ paths:
       responses:
         "204": { description: 삭제 성공 }
 
+  /contacts/ble-token:
+    post:
+      tags: [contacts]
+      summary: 내 프로필을 BLE로 advertise하기 위한 5분 만료 단기 토큰 발급
+      description: >
+        CLAUDE.md 섹션 4의 1단계("자신의 짧은 임시 토큰을 advertise")에 필요하지만
+        섹션 5 예시 목록에는 없던 엔드포인트라 구현 중 추가함. 모바일은 이 토큰을 받아
+        BLE Peripheral로 advertise하고, 주변 기기가 스캔해 /contacts/ble-tag 로 제출한다.
+
+        token은 JWT가 아니라 8자리 hex 코드다: BLE 광고 패킷은 보통 20~24바이트가 한계라
+        200자 이상인 JWT를 실을 수 없어서 짧은 일회성 코드로 설계를 바꿨다. 코드-userId 매핑은
+        서버 프로세스 메모리에 5분간 보관된다 (백엔드가 여러 인스턴스로 스케일아웃되면 재설계 필요).
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "a3f9c21e"
+                    description: BLE 광고 페이로드에 실을 8자리 hex 코드 (5분 만료)
+                  expiresAt:
+                    type: string
+                    format: date-time
+
   /contacts/ble-tag:
     post:
       tags: [contacts]
       summary: BLE로 수신한 상대 토큰으로 인맥 자동 등록 (CLAUDE.md 섹션 4)
+      description: >
+        이미 태깅된 상대(ownerUserId+targetUserId 조합)면 새로 만들지 않고
+        lastContactedAt만 갱신해 200을 반환한다 (재태깅 시 중복 생성 방지). 새 상대면 201.
+        자기 자신의 토큰으로 태깅을 시도하면 400.
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
@@ -282,10 +315,16 @@ paths:
               properties:
                 token:
                   type: string
-                  description: 상대 기기가 advertise한 5분 만료 단기 토큰
+                  example: "a3f9c21e"
+                  description: 상대 기기가 advertise한 8자리 hex 코드 (5분 만료)
       responses:
         "201":
-          description: 생성 성공
+          description: 새 상대를 태깅해 Contact를 생성함
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "200":
+          description: 이미 태깅된 상대라 lastContactedAt만 갱신함
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Contact" }

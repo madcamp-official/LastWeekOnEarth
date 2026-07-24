@@ -14,8 +14,6 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional().default(""),
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
   MAIL_SEND_API_KEY: z.string().optional().default(""),
-  BLE_TOKEN_SECRET: z.string().min(1, "BLE_TOKEN_SECRET is required"),
-  BLE_TOKEN_EXPIRES_IN: z.string().default("5m"),
   // 웹/iOS/Android 클라이언트 ID를 콤마로 구분해 등록 (Google Cloud Console에서 각각 발급)
   GOOGLE_CLIENT_IDS: z.string().min(1, "GOOGLE_CLIENT_IDS is required"),
 });
