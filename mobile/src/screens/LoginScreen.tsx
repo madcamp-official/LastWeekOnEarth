@@ -131,7 +131,7 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        {Platform.OS === "web" && (
+        {(Platform.OS === "web" || __DEV__) && (
           <TouchableOpacity style={styles.testLoginButton} onPress={handleTestLogin} disabled={loading}>
             <Text style={styles.testLoginText}>테스트 계정으로 로그인 (alice)</Text>
           </TouchableOpacity>

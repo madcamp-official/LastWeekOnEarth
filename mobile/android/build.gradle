@@ -1,0 +1,62 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext {
+        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '35.0.0'
+        minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
+        compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '35')
+        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
+        kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.25'
+
+        ndkVersion = "26.1.10909125"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath('com.android.tools.build:gradle')
+        classpath('com.facebook.react:react-native-gradle-plugin')
+        classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    }
+}
+
+// react-native-ble-advertiser가 자체 android/build.gradle에 compileSdkVersion 28을 하드코딩해둬서
+// (오래된 라이브러리), 최신 Android Gradle Plugin이 Java 9+ 컴파일에 요구하는 compileSdkVersion 30+과
+// 충돌한다. 이 android/ 폴더는 expo prebuild가 생성한 것이라 git에 안 잡히므로, prebuild를 다시 돌리면
+// 이 블록도 다시 추가해야 한다 (영구 고정하려면 config plugin으로 옮길 것).
+def forceSubprojectSdkVersions = { subproject ->
+    if (subproject.hasProperty("android")) {
+        subproject.android {
+            compileSdkVersion rootProject.ext.compileSdkVersion
+            buildToolsVersion rootProject.ext.buildToolsVersion
+        }
+    }
+}
+
+subprojects { subproject ->
+    if (subproject.state.executed) {
+        forceSubprojectSdkVersions(subproject)
+    } else {
+        subproject.afterEvaluate { forceSubprojectSdkVersions(subproject) }
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    repositories {
+        maven {
+            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+            url(new File(['node', '--print', "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim(), '../android'))
+        }
+        maven {
+            // Android JSC is installed from npm
+            url(new File(['node', '--print', "require.resolve('jsc-android/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim(), '../dist'))
+        }
+
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+}
