@@ -1,0 +1,20 @@
+import { Alert, Platform } from "react-native";
+
+/**
+ * react-native-web의 Alert.alert는 아무 동작도 하지 않는 no-op이라 버튼 콜백이 절대 호출되지 않는다.
+ * 웹에서는 window.confirm으로 대체하고, 네이티브에서는 기존 Alert.alert(확인/취소)를 사용한다.
+ */
+export function confirmAction(title: string, onConfirm: () => void, confirmLabel = "삭제") {
+  if (Platform.OS === "web") {
+    const webConfirm = (globalThis as { confirm?: (message: string) => boolean }).confirm;
+    if (webConfirm?.(title)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  Alert.alert(title, undefined, [
+    { text: "취소", style: "cancel" },
+    { text: confirmLabel, style: "destructive", onPress: onConfirm },
+  ]);
+}

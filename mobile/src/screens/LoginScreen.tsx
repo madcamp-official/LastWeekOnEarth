@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Config from "../config";
-import { loginWithGoogle } from "../services/auth";
+import { loginWithGoogle, loginWithPassword } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 
 // react-native-google-signin은 네이티브 전용 모듈이라 웹 프리뷰에서는 로드하지 않는다.
@@ -29,14 +29,17 @@ export default function LoginScreen() {
 
   async function handleGoogleLogin() {
     if (!GoogleSignin) {
-      // 웹 프리뷰는 Google Sign-in 네이티브 모듈이 없어 목업 세션으로 메인 화면 UI만 확인한다.
-      setSession("web-preview-token", "web-preview-refresh-token", {
-        id: "web-preview",
-        username: "preview",
-        name: "프리뷰 사용자",
-        email: "preview@example.com",
-        phoneVerified: false,
-      });
+      // 웹 프리뷰는 Google Sign-in 네이티브 모듈이 없어, 시드된 테스트 계정(alice)으로 실제 백엔드에 로그인한다.
+      setLoading(true);
+      try {
+        const { accessToken, refreshToken, user } = await loginWithPassword("alice", "password123");
+        setSession(accessToken, refreshToken, user);
+      } catch (err) {
+        console.error(err);
+        Alert.alert("로그인 실패", "웹 프리뷰용 테스트 계정 로그인에 실패했습니다. 백엔드가 켜져 있는지 확인해주세요.");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi } from "../services/contactsApi";
@@ -12,7 +13,27 @@ export function AddContactScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [memo, setMemo] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const handlePickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("사진 접근 권한이 필요합니다.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    setPhotoUrl(`data:image/jpeg;base64,${result.assets[0].base64}`);
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -27,6 +48,7 @@ export function AddContactScreen({ navigation }: Props) {
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         memo: memo.trim() || undefined,
+        photoUrl: photoUrl ?? undefined,
       });
       navigation.goBack();
     } catch (err) {
@@ -38,6 +60,14 @@ export function AddContactScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.photo} />
+        ) : (
+          <Text style={styles.photoPlaceholder}>+{"\n"}사진</Text>
+        )}
+      </Pressable>
+
       <TextInput style={styles.input} placeholder="이름 *" value={name} onChangeText={setName} />
       <TextInput style={styles.input} placeholder="소속" value={affiliation} onChangeText={setAffiliation} />
       <TextInput
@@ -72,6 +102,19 @@ export function AddContactScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 12 },
+  photoPicker: {
+    width: 88,
+    height: 88,
+    borderRadius: 12,
+    backgroundColor: "#F2F2F2",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 4,
+    overflow: "hidden",
+  },
+  photo: { width: 88, height: 88 },
+  photoPlaceholder: { textAlign: "center", color: "#999", fontWeight: "600" },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
   memo: { height: 80, textAlignVertical: "top" },
   button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center" },

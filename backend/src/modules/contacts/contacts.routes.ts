@@ -17,6 +17,8 @@ const contactCreateSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().optional(),
   memo: z.string().optional(),
+  // 사진은 별도 스토리지 연동 전까지 base64 data URL 문자열을 그대로 저장한다 (User.avatarUrl과 동일 방식).
+  photoUrl: z.string().max(5_000_000).optional(),
 });
 
 const contactUpdateSchema = contactCreateSchema.partial();

@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
+import { confirmAction } from "../utils/confirm";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupsList">;
 
@@ -32,6 +33,13 @@ export function GroupsListScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  const handleDelete = (group: ContactGroup) => {
+    confirmAction(`"${group.name}" 그룹을 삭제하시겠습니까?`, async () => {
+      await groupsApi.remove(group.id);
+      load();
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -54,8 +62,13 @@ export function GroupsListScreen({ navigation }: Props) {
               <Text style={styles.name}>{item.name}</Text>
               <Text style={styles.meta}>{item.memberCount}명</Text>
             </View>
-            <View style={styles.freqBadge}>
-              <Text style={styles.freqBadgeText}>{formatFrequency(item.frequencyDays)}마다 연락</Text>
+            <View style={styles.rowRight}>
+              <View style={styles.freqBadge}>
+                <Text style={styles.freqBadgeText}>{formatFrequency(item.frequencyDays)}마다 연락</Text>
+              </View>
+              <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)} hitSlop={8}>
+                <Text style={styles.deleteButtonText}>🗑</Text>
+              </Pressable>
             </View>
           </Pressable>
         )}
@@ -82,7 +95,10 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 16, fontWeight: "600" },
   meta: { color: "#888", marginTop: 2 },
+  rowRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   freqBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   freqBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 12 },
+  deleteButton: { padding: 6 },
+  deleteButtonText: { fontSize: 16 },
   empty: { textAlign: "center", marginTop: 40, color: "#999" },
 });

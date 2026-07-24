@@ -1,9 +1,10 @@
 import React, { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact, type ContactLog } from "../services/contactsApi";
+import { confirmAction } from "../utils/confirm";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
 
@@ -33,17 +34,10 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   };
 
   const handleDelete = () => {
-    Alert.alert("삭제하시겠습니까?", undefined, [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          await contactsApi.remove(contactId);
-          navigation.goBack();
-        },
-      },
-    ]);
+    confirmAction("삭제하시겠습니까?", async () => {
+      await contactsApi.remove(contactId);
+      navigation.goBack();
+    });
   };
 
   if (!contact) return null;
