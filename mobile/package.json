@@ -1,0 +1,38 @@
+{
+  "name": "lastweekonearth-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@react-native-firebase/app": "^20.4.0",
+    "@react-native-firebase/messaging": "^20.4.0",
+    "axios": "^1.7.7",
+    "react": "18.3.1",
+    "react-native": "0.75.4",
+    "react-native-ble-plx": "^3.2.1",
+    "react-native-config": "^1.5.3",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.4",
+    "@babel/runtime": "^7.25.6",
+    "@react-native/babel-preset": "0.75.4",
+    "@react-native/eslint-config": "0.75.4",
+    "@react-native/metro-config": "0.75.4",
+    "@react-native/typescript-config": "0.75.4",
+    "@types/react": "^18.3.5",
+    "jest": "^29.7.0",
+    "react-test-renderer": "18.3.1",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
