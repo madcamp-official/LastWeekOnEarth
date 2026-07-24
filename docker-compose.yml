@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: contactapp
     ports:
-      - "5432:5432"
+      - "5434:5432" # 호스트에 5432/5433이 이미 쓰이고 있을 수 있어 5434로 매핑
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
