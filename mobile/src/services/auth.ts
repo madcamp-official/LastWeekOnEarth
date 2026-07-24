@@ -6,6 +6,7 @@ export interface AuthUser {
   name: string;
   email: string;
   phoneVerified: boolean;
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {

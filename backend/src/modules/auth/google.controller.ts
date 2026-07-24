@@ -69,6 +69,7 @@ export async function googleLoginHandler(req: Request, res: Response) {
       name: user.name,
       email: user.email,
       phoneVerified: user.phoneVerified,
+      avatarUrl: user.avatarUrl,
     },
   });
 }

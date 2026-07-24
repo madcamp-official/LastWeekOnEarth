@@ -25,6 +25,7 @@ model User {
   phone         String?  @unique
   phoneVerified Boolean  @default(false)
   googleId      String?  @unique
+  avatarUrl     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

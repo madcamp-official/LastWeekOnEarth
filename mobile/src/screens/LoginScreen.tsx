@@ -52,7 +52,7 @@ export default function LoginScreen() {
       const { accessToken, refreshToken, user } = await loginWithGoogle(idToken);
       setSession(accessToken, refreshToken, user);
     } catch (err) {
-      if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
+      if (isErrorWithCode(err) && (err as { code: string }).code === statusCodes.SIGN_IN_CANCELLED) {
         return;
       }
       console.error(err);
