@@ -14,6 +14,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional().default(""),
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
   MAIL_SEND_API_KEY: z.string().optional().default(""),
+  // 웹/iOS/Android 클라이언트 ID를 콤마로 구분해 등록 (Google Cloud Console에서 각각 발급)
+  GOOGLE_CLIENT_IDS: z.string().min(1, "GOOGLE_CLIENT_IDS is required"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -23,4 +25,7 @@ if (!parsed.success) {
   throw new Error("Invalid environment variables. .env.example을 참고해 .env를 채워주세요.");
 }
 
-export const env = parsed.data;
+export const env = {
+  ...parsed.data,
+  GOOGLE_CLIENT_IDS: parsed.data.GOOGLE_CLIENT_IDS.split(",").map((id) => id.trim()),
+};

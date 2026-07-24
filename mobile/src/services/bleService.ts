@@ -1,12 +1,14 @@
 import { PermissionsAndroid, Platform } from "react-native";
-import { BleManager } from "react-native-ble-plx";
-import BLEAdvertiser from "react-native-ble-advertiser";
 
 // 이 앱이 advertise하는 서비스임을 스캔 쪽에서 식별하기 위한 고정 UUID (무작위 생성, 다른 앱과 충돌 방지용).
 export const BLE_SERVICE_UUID = "e399082d-a98e-435e-8118-f1682046732d";
 export const BLE_RSSI_THRESHOLD = -50;
 
-export const bleManager = new BleManager();
+// 웹(Expo web)에는 BLE 관련 네이티브 모듈이 없으므로, 웹에서는 모듈 로드 자체를 건너뛴다.
+const BleManager = Platform.OS === "web" ? null : require("react-native-ble-plx").BleManager;
+const BLEAdvertiser = Platform.OS === "web" ? null : require("react-native-ble-advertiser").default;
+
+export const bleManager = Platform.OS === "web" ? null : new BleManager();
 
 /**
  * Android 12(API 31) 미만은 위치 권한, 이상은 BLUETOOTH_SCAN/ADVERTISE/CONNECT 런타임 권한이 있어야
@@ -79,7 +81,7 @@ function base64ToBytes(base64: string): number[] {
  */
 export async function startAdvertising(code: string): Promise<void> {
   if (Platform.OS !== "android") {
-    console.warn("[bleService] iOS는 현재 BLE 광고를 지원하지 않습니다 (스캔만 가능).");
+    console.warn("[bleService] 이 플랫폼은 BLE 광고를 지원하지 않습니다 (Android만 가능).");
     return;
   }
 
@@ -99,7 +101,12 @@ export async function stopAdvertising(): Promise<void> {
  * 기기만 콜백을 호출한다. 반환된 함수를 호출하면 스캔을 멈춘다.
  */
 export function scanForNearbyCodes(onFound: (code: string, rssi: number) => void): () => void {
-  bleManager.startDeviceScan([BLE_SERVICE_UUID], { allowDuplicates: true }, (error, device) => {
+  if (!bleManager) {
+    console.warn("[bleService] 이 플랫폼에서는 BLE 스캔을 지원하지 않습니다.");
+    return () => undefined;
+  }
+
+  bleManager.startDeviceScan([BLE_SERVICE_UUID], { allowDuplicates: true }, (error: any, device: any) => {
     if (error) {
       console.warn("[bleService] scan error:", error.message);
       return;
@@ -111,5 +118,5 @@ export function scanForNearbyCodes(onFound: (code: string, rssi: number) => void
     onFound(code, device.rssi);
   });
 
-  return () => bleManager.stopDeviceScan();
+  return () => bleManager?.stopDeviceScan();
 }

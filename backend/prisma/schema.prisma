@@ -4,26 +4,31 @@
 // 2) 외래키 컬럼에 @@index 추가 — Prisma는 FK에 자동 인덱스를 걸지 않으므로 조회 성능을 위해 명시
 // 3) 소유 관계에 onDelete: Cascade 지정 — 유저/연락처 삭제 시 하위 레코드가 고아로 남지 않도록 함
 //    (Notification.contactId는 원본처럼 느슨한 참조로 유지: BLE 태깅 등에서 유연하게 쓰기 위함)
+// 4) enum -> String: 로컬 개발에 Docker/PostgreSQL이 없어 SQLite로 임시 전환했는데, SQLite 커넥터는
+//    네이티브 enum을 지원하지 않아 전부 String으로 바꾸고 허용값은 애플리케이션(zod)에서 검증한다.
+//    실배포 시 postgresql로 되돌리면서 enum도 함께 복원할 것.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
   id            String   @id @default(uuid())
   username      String   @unique
-  passwordHash  String
+  passwordHash  String?
   name          String
   affiliation   String
   email         String   @unique
   emailVerified Boolean  @default(false)
-  phone         String   @unique
+  phone         String?  @unique
   phoneVerified Boolean  @default(false)
+  googleId      String?  @unique
+  avatarUrl     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -64,26 +69,23 @@ model PhoneVerification {
   @@index([userId])
 }
 
-enum ContactSource {
-  MANUAL
-  BLE
-}
-
+// ContactSource: "MANUAL" | "BLE"
 model Contact {
-  id              String        @id @default(uuid())
+  id              String    @id @default(uuid())
   ownerUserId     String
-  owner           User          @relation("OwnerContacts", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  owner           User      @relation("OwnerContacts", fields: [ownerUserId], references: [id], onDelete: Cascade)
   targetUserId    String?
-  targetUser      User?         @relation("TargetUser", fields: [targetUserId], references: [id])
+  targetUser      User?     @relation("TargetUser", fields: [targetUserId], references: [id])
   name            String
   affiliation     String?
   email           String?
   phone           String?
   memo            String?
-  source          ContactSource @default(MANUAL)
+  photoUrl        String?
+  source          String    @default("MANUAL")
   lastContactedAt DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   groupMemberships ContactGroupMember[]
   logs             ContactLog[]
@@ -118,45 +120,29 @@ model ContactGroupMember {
   @@index([contactId])
 }
 
-enum LogChannel {
-  EMAIL
-  CALL
-  MEETING
-  OTHER
-}
-
+// LogChannel: "EMAIL" | "CALL" | "MEETING" | "OTHER"
 model ContactLog {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   contactId   String
-  contact     Contact    @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  channel     LogChannel
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  channel     String
   memo        String?
-  contactedAt DateTime   @default(now())
+  contactedAt DateTime @default(now())
 
   @@index([contactId])
 }
 
-enum CvSource {
-  MANUAL
-  SOCIAL
-}
-
+// CvSource: "MANUAL" | "SOCIAL"
 model CvEntry {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   content   String
-  source    CvSource @default(MANUAL)
+  source    String   @default("MANUAL")
   entryDate DateTime @default(now())
   createdAt DateTime @default(now())
 
   @@index([userId])
-}
-
-enum DraftStatus {
-  DRAFT
-  SCHEDULED
-  SENT
 }
 
 model EmailBatch {
@@ -171,6 +157,7 @@ model EmailBatch {
   @@index([ownerUserId])
 }
 
+// DraftStatus: "DRAFT" | "SCHEDULED" | "SENT"
 model EmailDraft {
   id          String      @id @default(uuid())
   ownerUserId String
@@ -181,7 +168,7 @@ model EmailDraft {
   batch       EmailBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   subject     String
   body        String
-  status      DraftStatus @default(DRAFT)
+  status      String      @default("DRAFT")
   scheduledAt DateTime?
   createdAt   DateTime    @default(now())
 
@@ -190,21 +177,18 @@ model EmailDraft {
   @@index([batchId])
 }
 
-enum NotificationType {
-  CONTACT_REMINDER
-}
-
+// NotificationType: "CONTACT_REMINDER"
 model Notification {
-  id          String           @id @default(uuid())
+  id          String        @id @default(uuid())
   userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   contactId   String?
   groupId     String?
-  group       ContactGroup?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  type        NotificationType
+  group       ContactGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  type        String
   scheduledAt DateTime
-  sent        Boolean          @default(false)
-  createdAt   DateTime         @default(now())
+  sent        Boolean       @default(false)
+  createdAt   DateTime      @default(now())
 
   @@index([userId])
   @@index([groupId])

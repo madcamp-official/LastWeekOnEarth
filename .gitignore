@@ -27,6 +27,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # --- Prisma ---
+backend/prisma/dev.db
 backend/prisma/migrations/dev.db
 backend/generated/
 

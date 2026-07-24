@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authRoutes from "../modules/auth/auth.routes";
+import usersRoutes from "../modules/users/users.routes";
 import contactsRoutes from "../modules/contacts/contacts.routes";
 import groupsRoutes from "../modules/groups/groups.routes";
 import cvRoutes from "../modules/cv/cv.routes";
@@ -9,6 +10,7 @@ import notificationsRoutes from "../modules/notifications/notifications.routes";
 const router = Router();
 
 router.use("/auth", authRoutes);
+router.use("/users", usersRoutes);
 router.use("/contacts", contactsRoutes);
 router.use("/groups", groupsRoutes);
 router.use("/cv", cvRoutes);

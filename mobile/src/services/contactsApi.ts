@@ -10,6 +10,7 @@ export interface Contact {
   email: string | null;
   phone: string | null;
   memo: string | null;
+  photoUrl: string | null;
   source: ContactSource;
   lastContactedAt: string | null;
   createdAt: string;
@@ -29,6 +30,7 @@ export interface ContactInput {
   email?: string;
   phone?: string;
   memo?: string;
+  photoUrl?: string;
 }
 
 export const contactsApi = {
