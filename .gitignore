@@ -1,0 +1,56 @@
+# --- Internal spec doc (not for repo) ---
+CLAUDE.md
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Editors ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# --- Env files (all workspaces) ---
+.env
+.env.*
+!.env.example
+
+# --- Node / TypeScript (backend & mobile) ---
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Prisma ---
+backend/prisma/migrations/dev.db
+backend/generated/
+
+# --- React Native (mobile) ---
+mobile/.expo/
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/*.keystore
+!mobile/android/debug.keystore
+mobile/ios/build/
+mobile/ios/Pods/
+mobile/ios/*.xcworkspace
+mobile/ios/DerivedData/
+mobile/ios/*.xcuserstate
+mobile/ios/**/xcuserdata/
+mobile/*.jsbundle
+mobile/.bundle/
+
+# --- Firebase ---
+GoogleService-Info.plist
+google-services.json
+
+# --- Logs / misc ---
+*.log
+.DS_Store
