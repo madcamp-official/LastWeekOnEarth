@@ -10,6 +10,12 @@
       "android",
       "web"
     ],
+    "ios": {
+      "bundleIdentifier": "com.lastweekonearth.app"
+    },
+    "android": {
+      "package": "com.lastweekonearth.app"
+    },
     "web": {
       "bundler": "metro"
     },
