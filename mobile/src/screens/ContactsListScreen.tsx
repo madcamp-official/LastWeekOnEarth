@@ -4,12 +4,14 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact } from "../services/contactsApi";
+import { useAuthStore } from "../store/useAuthStore";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactsList">;
 
 export function ContactsListScreen({ navigation }: Props) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
+  const clearAuth = useAuthStore((s) => s.clear);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,6 +38,9 @@ export function ContactsListScreen({ navigation }: Props) {
           <Text style={styles.buttonText}>주변 기기로 태깅</Text>
         </Pressable>
       </View>
+      <Pressable onPress={clearAuth}>
+        <Text style={styles.switchUser}>다른 계정 토큰으로 전환 (개발용)</Text>
+      </Pressable>
 
       <FlatList
         data={contacts}
@@ -68,4 +73,5 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, fontWeight: "600" },
   meta: { color: "#666", marginTop: 2 },
   empty: { textAlign: "center", marginTop: 40, color: "#999" },
+  switchUser: { textAlign: "center", color: "#999", marginBottom: 8, fontSize: 12 },
 });

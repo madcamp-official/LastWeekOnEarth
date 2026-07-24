@@ -40,12 +40,14 @@ mobile/android/*.keystore
 !mobile/android/debug.keystore
 mobile/ios/build/
 mobile/ios/Pods/
+mobile/ios/.xcode.env.local
 mobile/ios/*.xcworkspace
 mobile/ios/DerivedData/
 mobile/ios/*.xcuserstate
 mobile/ios/**/xcuserdata/
 mobile/*.jsbundle
 mobile/.bundle/
+mobile/vendor/
 
 # --- Firebase ---
 GoogleService-Info.plist

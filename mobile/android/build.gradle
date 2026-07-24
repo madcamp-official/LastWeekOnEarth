@@ -1,0 +1,46 @@
+buildscript {
+    ext {
+        // androidx.core:core 1.16.0(react-navigation/screens 계열이 끌고 옴)이 compileSdk 35 +
+        // AGP 8.6.0 이상을 요구해서 34/8.5.0에서 34/AGP 버전 통째로 올림.
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 23
+        compileSdkVersion = 35
+        targetSdkVersion = 35
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.24"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.6.0")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+    }
+}
+
+// react-native-ble-advertiser가 자체 android/build.gradle에 compileSdkVersion 28을
+// 하드코딩해둬서(오래된 라이브러리), 최신 Android Gradle Plugin이 Java 9+ 컴파일에
+// 요구하는 compileSdkVersion 30+과 충돌한다. node_modules 안을 직접 고치면 npm install할
+// 때마다 사라지므로, 루트에서 모든 서브프로젝트의 SDK 버전을 강제로 맞춘다.
+// apply plugin 보다 먼저 등록해야 한다 (RN 플러그인이 서브프로젝트를 먼저 평가해버리면
+// afterEvaluate 등록 시점에 "already evaluated" 에러가 남) + 이미 평가된 경우 대비 방어 코드.
+def forceSubprojectSdkVersions = { subproject ->
+    if (subproject.hasProperty("android")) {
+        subproject.android {
+            compileSdkVersion rootProject.ext.compileSdkVersion
+            buildToolsVersion rootProject.ext.buildToolsVersion
+        }
+    }
+}
+
+subprojects { subproject ->
+    if (subproject.state.executed) {
+        forceSubprojectSdkVersions(subproject)
+    } else {
+        subproject.afterEvaluate { forceSubprojectSdkVersions(subproject) }
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"
