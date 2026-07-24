@@ -1,5 +1,5 @@
 import axios from "axios";
-import Config from "react-native-config";
+import Config from "../config";
 import { useAuthStore } from "../store/useAuthStore";
 
 export const api = axios.create({

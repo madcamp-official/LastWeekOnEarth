@@ -1,25 +1,44 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Config from "react-native-config";
-import { GoogleSignin, isSuccessResponse, isErrorWithCode, statusCodes } from "@react-native-google-signin/google-signin";
+import { ActivityIndicator, Alert, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Config from "../config";
 import { loginWithGoogle } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 
-GoogleSignin.configure({
-  webClientId: Config.GOOGLE_WEB_CLIENT_ID,
-  iosClientId: Config.GOOGLE_IOS_CLIENT_ID,
-  offlineAccess: false,
-});
+// react-native-google-signin은 네이티브 전용 모듈이라 웹 프리뷰에서는 로드하지 않는다.
+const GoogleSigninModule = Platform.OS === "web" ? null : require("@react-native-google-signin/google-signin");
+const GoogleSignin = GoogleSigninModule?.GoogleSignin;
+const isSuccessResponse = GoogleSigninModule?.isSuccessResponse;
+const isErrorWithCode = GoogleSigninModule?.isErrorWithCode;
+const statusCodes = GoogleSigninModule?.statusCodes;
+
+if (GoogleSignin) {
+  GoogleSignin.configure({
+    webClientId: Config.GOOGLE_WEB_CLIENT_ID,
+    iosClientId: Config.GOOGLE_IOS_CLIENT_ID,
+    offlineAccess: false,
+  });
+}
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
 
   useEffect(() => {
-    GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true }).catch(() => undefined);
+    GoogleSignin?.hasPlayServices({ showPlayServicesUpdateDialog: true }).catch(() => undefined);
   }, []);
 
   async function handleGoogleLogin() {
+    if (!GoogleSignin) {
+      // 웹 프리뷰는 Google Sign-in 네이티브 모듈이 없어 목업 세션으로 메인 화면 UI만 확인한다.
+      setSession("web-preview-token", "web-preview-refresh-token", {
+        id: "web-preview",
+        username: "preview",
+        name: "프리뷰 사용자",
+        email: "preview@example.com",
+        phoneVerified: false,
+      });
+      return;
+    }
     setLoading(true);
     try {
       const response = await GoogleSignin.signIn();
