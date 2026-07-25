@@ -7,6 +7,14 @@ export interface ProfileUpdateInput {
   phone?: string | null;
 }
 
+export interface UserEmail {
+  id: string;
+  userId: string;
+  email: string;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
 export const usersApi = {
   me: () => api.get<AuthUser>("/users/me").then((res) => res.data),
 

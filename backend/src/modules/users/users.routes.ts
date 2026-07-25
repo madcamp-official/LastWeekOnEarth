@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
+import { ensureUserPrimaryEmail } from "../../lib/emails";
 
 const router = Router();
 

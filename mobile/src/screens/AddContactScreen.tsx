@@ -3,9 +3,16 @@ import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from "reac
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { contactsApi } from "../services/contactsApi";
+import { contactsApi, type ContactMethod } from "../services/contactsApi";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddContact">;
+
+const CONTACT_METHOD_OPTIONS: { label: string; value: ContactMethod }[] = [
+  { label: "이메일", value: "EMAIL" },
+  { label: "카카오톡", value: "KAKAO" },
+  { label: "전화", value: "CALL" },
+  { label: "기타", value: "OTHER" },
+];
 
 export function AddContactScreen({ navigation }: Props) {
   const [name, setName] = useState("");
@@ -14,6 +21,7 @@ export function AddContactScreen({ navigation }: Props) {
   const [phone, setPhone] = useState("");
   const [memo, setMemo] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [contactMethod, setContactMethod] = useState<ContactMethod>("OTHER");
   const [submitting, setSubmitting] = useState(false);
 
   const handlePickPhoto = async () => {
@@ -49,6 +57,7 @@ export function AddContactScreen({ navigation }: Props) {
         phone: phone.trim() || undefined,
         memo: memo.trim() || undefined,
         photoUrl: photoUrl ?? undefined,
+        contactMethod,
       });
       navigation.goBack();
     } catch (err) {
@@ -85,6 +94,20 @@ export function AddContactScreen({ navigation }: Props) {
         onChangeText={setPhone}
         keyboardType="phone-pad"
       />
+      <Text style={styles.label}>연락 방법</Text>
+      <View style={styles.optionRow}>
+        {CONTACT_METHOD_OPTIONS.map((option) => (
+          <Pressable
+            key={option.value}
+            style={[styles.optionChip, contactMethod === option.value && styles.optionChipActive]}
+            onPress={() => setContactMethod(option.value)}
+          >
+            <Text style={[styles.optionText, contactMethod === option.value && styles.optionTextActive]}>
+              {option.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
       <TextInput
         style={[styles.input, styles.memo]}
         placeholder="메모"
@@ -116,6 +139,18 @@ const styles = StyleSheet.create({
   photo: { width: 88, height: 88 },
   photoPlaceholder: { textAlign: "center", color: "#999", fontWeight: "600" },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
+  label: { fontWeight: "600" },
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  optionChipActive: { backgroundColor: "#111", borderColor: "#111" },
+  optionText: { color: "#111", fontWeight: "600" },
+  optionTextActive: { color: "#fff" },
   memo: { height: 80, textAlignVertical: "top" },
   button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center" },
   buttonText: { color: "#fff", fontWeight: "600" },

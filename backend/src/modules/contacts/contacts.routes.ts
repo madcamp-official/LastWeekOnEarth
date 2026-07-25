@@ -1,10 +1,12 @@
 import { Router } from "express";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/asyncHandler";
 import { issueBleCode, resolveBleCode } from "../../lib/bleCodeStore";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
+import { ensureContactPrimaryEmail } from "../../lib/emails";
 
 // CLAUDE.md 섹션 4 (BLE 태깅), 섹션 5 (수동 등록)
 const router = Router();
@@ -13,12 +15,13 @@ router.use(requireAuth);
 
 const contactCreateSchema = z.object({
   name: z.string().min(1),
-  affiliation: z.string().optional(),
+  affiliation: z.string().nullable().optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
-  memo: z.string().optional(),
+  phone: z.string().nullable().optional(),
+  memo: z.string().nullable().optional(),
   // 사진은 별도 스토리지 연동 전까지 base64 data URL 문자열을 그대로 저장한다 (User.avatarUrl과 동일 방식).
-  photoUrl: z.string().max(5_000_000).optional(),
+  photoUrl: z.string().max(5_000_000).nullable().optional(),
+  contactMethod: z.enum(["EMAIL", "KAKAO", "CALL", "OTHER"]).optional(),
 });
 
 const contactUpdateSchema = contactCreateSchema.partial();
@@ -54,6 +57,9 @@ router.post(
     const contact = await prisma.contact.create({
       data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL" },
     });
+    if (contact.email) {
+      await ensureContactPrimaryEmail(contact.id);
+    }
     res.status(201).json(contact);
   }),
 );
@@ -114,6 +120,9 @@ router.post(
         lastContactedAt: new Date(),
       },
     });
+    if (contact.email) {
+      await ensureContactPrimaryEmail(contact.id);
+    }
     return res.status(201).json(contact);
   }),
 );
@@ -174,6 +183,89 @@ router.get(
       orderBy: { contactedAt: "desc" },
     });
     res.json(logs);
+  }),
+);
+
+// --- 여러 이메일 관리 (학교 도메인 이메일 등 추가 등록, 대표 이메일 선정) ---
+
+router.get(
+  "/:id/emails",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    await ensureContactPrimaryEmail(contact.id);
+    const emails = await prisma.contactEmail.findMany({
+      where: { contactId: contact.id },
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    });
+    res.json(emails);
+  }),
+);
+
+const contactEmailAddSchema = z.object({ email: z.string().email() });
+
+router.post(
+  "/:id/emails",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    await ensureContactPrimaryEmail(contact.id);
+    const { email } = contactEmailAddSchema.parse(req.body);
+    const isFirst = (await prisma.contactEmail.count({ where: { contactId: contact.id } })) === 0;
+
+    try {
+      const created = await prisma.contactEmail.create({
+        data: { contactId: contact.id, email, isPrimary: isFirst },
+      });
+      if (isFirst) {
+        await prisma.contact.update({ where: { id: contact.id }, data: { email } });
+      }
+      res.status(201).json(created);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new HttpError(409, "이미 등록된 이메일입니다.");
+      }
+      throw err;
+    }
+  }),
+);
+
+router.post(
+  "/:id/emails/:emailId/primary",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    const target = await prisma.contactEmail.findFirst({
+      where: { id: req.params.emailId, contactId: contact.id },
+    });
+    if (!target) {
+      throw new HttpError(404, "이메일을 찾을 수 없습니다.");
+    }
+
+    await prisma.$transaction([
+      prisma.contactEmail.updateMany({ where: { contactId: contact.id, isPrimary: true }, data: { isPrimary: false } }),
+      prisma.contactEmail.update({ where: { id: target.id }, data: { isPrimary: true } }),
+      prisma.contact.update({ where: { id: contact.id }, data: { email: target.email } }),
+    ]);
+
+    const updated = await prisma.contact.findUniqueOrThrow({ where: { id: contact.id } });
+    res.json(updated);
+  }),
+);
+
+router.delete(
+  "/:id/emails/:emailId",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    const target = await prisma.contactEmail.findFirst({
+      where: { id: req.params.emailId, contactId: contact.id },
+    });
+    if (!target) {
+      throw new HttpError(404, "이메일을 찾을 수 없습니다.");
+    }
+    if (target.isPrimary) {
+      throw new HttpError(400, "대표 이메일은 삭제할 수 없습니다. 다른 이메일을 먼저 대표로 지정해주세요.");
+    }
+
+    await prisma.contactEmail.delete({ where: { id: target.id } });
+    res.status(204).send();
   }),
 );
 

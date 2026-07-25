@@ -115,7 +115,7 @@ export function GroupDetailScreen({ route, navigation }: Props) {
           style={[styles.button, styles.actionButton]}
           onPress={() => navigation.navigate("AddGroupMembers", { groupId })}
         >
-          <Text style={styles.buttonText}>+ 구성원 추가</Text>
+          <Text style={styles.buttonText}>+ 구성원 수정</Text>
         </Pressable>
         <Pressable style={[styles.button, styles.actionButton]} onPress={handleStartEdit}>
           <Text style={styles.buttonText}>정보 수정</Text>

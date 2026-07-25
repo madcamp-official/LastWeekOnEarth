@@ -32,8 +32,8 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  contactsOwned      Contact[]            @relation("OwnerContacts")
-  contactsTagged     Contact[]            @relation("TargetUser")
+  contactsOwned      Contact[]           @relation("OwnerContacts")
+  contactsTagged     Contact[]           @relation("TargetUser")
   groups             ContactGroup[]
   cvEntries          CvEntry[]
   mailDrafts         EmailDraft[]
@@ -41,6 +41,20 @@ model User {
   notifications      Notification[]
   phoneVerifications PhoneVerification[]
   refreshTokens      RefreshToken[]
+  emails             UserEmail[]
+}
+
+// 사용자가 등록한 여러 이메일 (구글 로그인 계정 외 학교 도메인 이메일 등). isPrimary인 값은
+// User.email과 항상 동기화한다 (로그인/유니크 매칭 등 기존 코드가 User.email 하나만 보기 때문).
+model UserEmail {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String   @unique
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model RefreshToken {
@@ -82,6 +96,7 @@ model Contact {
   phone           String?
   memo            String?
   photoUrl        String?
+  contactMethod   String    @default("OTHER")
   source          String    @default("MANUAL")
   lastContactedAt DateTime?
   createdAt       DateTime  @default(now())
@@ -90,9 +105,23 @@ model Contact {
   groupMemberships ContactGroupMember[]
   logs             ContactLog[]
   mailDrafts       EmailDraft[]
+  emails           ContactEmail[]
 
   @@index([ownerUserId])
   @@index([targetUserId])
+}
+
+// 인맥이 가진 여러 이메일. isPrimary인 값은 Contact.email과 항상 동기화한다.
+model ContactEmail {
+  id        String   @id @default(uuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  email     String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([contactId, email])
+  @@index([contactId])
 }
 
 model ContactGroup {
