@@ -16,6 +16,14 @@ export interface Contact {
   createdAt: string;
 }
 
+export interface ContactEmail {
+  id: string;
+  contactId: string;
+  email: string;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
 export interface ContactLog {
   id: string;
   contactId: string;
@@ -56,4 +64,14 @@ export const contactsApi = {
       .then((res) => res.data),
 
   bleTag: (token: string) => api.post<Contact>("/contacts/ble-tag", { token }).then((res) => res.data),
+
+  listEmails: (id: string) => api.get<ContactEmail[]>(`/contacts/${id}/emails`).then((res) => res.data),
+
+  addEmail: (id: string, email: string) =>
+    api.post<ContactEmail>(`/contacts/${id}/emails`, { email }).then((res) => res.data),
+
+  setPrimaryEmail: (id: string, emailId: string) =>
+    api.post<Contact>(`/contacts/${id}/emails/${emailId}/primary`).then((res) => res.data),
+
+  removeEmail: (id: string, emailId: string) => api.delete(`/contacts/${id}/emails/${emailId}`),
 };

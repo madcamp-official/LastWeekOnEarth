@@ -4,8 +4,9 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { contactsApi, type Contact, type ContactLog } from "../services/contactsApi";
+import { contactsApi, type Contact, type ContactEmail, type ContactLog } from "../services/contactsApi";
 import { confirmAction } from "../utils/confirm";
+import { EmailListEditor } from "../components/EmailListEditor";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
 
@@ -13,15 +14,19 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   const { contactId } = route.params;
   const [contact, setContact] = useState<Contact | null>(null);
   const [logs, setLogs] = useState<ContactLog[]>([]);
+  const [emails, setEmails] = useState<ContactEmail[]>([]);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("");
   const [affiliation, setAffiliation] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [memo, setMemo] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  const loadEmails = useCallback(async () => {
+    setEmails(await contactsApi.listEmails(contactId));
+  }, [contactId]);
 
   const load = useCallback(async () => {
     const [contactRes, logsRes] = await Promise.all([
@@ -30,7 +35,8 @@ export function ContactDetailScreen({ route, navigation }: Props) {
     ]);
     setContact(contactRes);
     setLogs(logsRes);
-  }, [contactId]);
+    await loadEmails();
+  }, [contactId, loadEmails]);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,7 +60,6 @@ export function ContactDetailScreen({ route, navigation }: Props) {
     if (!contact) return;
     setName(contact.name);
     setAffiliation(contact.affiliation ?? "");
-    setEmail(contact.email ?? "");
     setPhone(contact.phone ?? "");
     setMemo(contact.memo ?? "");
     setPhotoUrl(contact.photoUrl);
@@ -90,7 +95,6 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       const updated = await contactsApi.update(contactId, {
         name: name.trim(),
         affiliation: affiliation.trim() || undefined,
-        email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         memo: memo.trim() || undefined,
         photoUrl: photoUrl ?? undefined,
@@ -119,14 +123,6 @@ export function ContactDetailScreen({ route, navigation }: Props) {
 
         <TextInput style={styles.input} placeholder="이름 *" value={name} onChangeText={setName} />
         <TextInput style={styles.input} placeholder="소속" value={affiliation} onChangeText={setAffiliation} />
-        <TextInput
-          style={styles.input}
-          placeholder="이메일"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
         <TextInput
           style={styles.input}
           placeholder="전화번호"
@@ -161,10 +157,29 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       ) : null}
       <Text style={styles.name}>{contact.name}</Text>
       <Text style={styles.meta}>{contact.affiliation ?? "-"}</Text>
-      <Text style={styles.meta}>{contact.email ?? "-"}</Text>
       <Text style={styles.meta}>{contact.phone ?? "-"}</Text>
       {contact.memo ? <Text style={styles.memoText}>{contact.memo}</Text> : null}
       <Text style={styles.badge}>{contact.source === "BLE" ? "BLE로 태깅됨" : "수동 등록"}</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>이메일</Text>
+        <EmailListEditor
+          emails={emails}
+          onAdd={async (value) => {
+            await contactsApi.addEmail(contactId, value);
+            await loadEmails();
+          }}
+          onSetPrimary={async (id) => {
+            const updated = await contactsApi.setPrimaryEmail(contactId, id);
+            setContact(updated);
+            await loadEmails();
+          }}
+          onRemove={async (id) => {
+            await contactsApi.removeEmail(contactId, id);
+            await loadEmails();
+          }}
+        />
+      </View>
 
       <View style={styles.actions}>
         <Pressable style={styles.button} onPress={handleLog}>
@@ -207,6 +222,7 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: "#b00020" },
   buttonText: { color: "#fff", fontWeight: "600" },
   sectionTitle: { fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8 },
+  section: { marginTop: 8 },
   empty: { color: "#999" },
   logRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#eee" },
   photoPicker: {

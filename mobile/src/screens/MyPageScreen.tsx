@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,7 +14,8 @@ import {
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "../store/useAuthStore";
-import { usersApi } from "../services/usersApi";
+import { usersApi, type UserEmail } from "../services/usersApi";
+import { EmailListEditor } from "../components/EmailListEditor";
 
 export function MyPageScreen() {
   const user = useAuthStore((s) => s.user);
@@ -25,6 +27,15 @@ export function MyPageScreen() {
   const [name, setName] = useState(user?.name ?? "");
   const [affiliation, setAffiliation] = useState(user?.affiliation ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
+  const [emails, setEmails] = useState<UserEmail[]>([]);
+
+  const loadEmails = useCallback(async () => {
+    setEmails(await usersApi.listEmails());
+  }, []);
+
+  useEffect(() => {
+    loadEmails();
+  }, [loadEmails]);
 
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,7 +99,7 @@ export function MyPageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         <Pressable style={styles.avatar} onPress={handlePickPhoto} disabled={uploading}>
           {user?.avatarUrl ? (
             <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
@@ -116,7 +127,6 @@ export function MyPageScreen() {
               onChangeText={setPhone}
               keyboardType="phone-pad"
             />
-            <Text style={styles.email}>{user?.email ?? "-"}</Text>
 
             <View style={styles.formActions}>
               <Pressable style={[styles.formButton, styles.cancelButton]} onPress={() => setEditing(false)} disabled={saving}>
@@ -130,27 +140,46 @@ export function MyPageScreen() {
         ) : (
           <>
             <Text style={styles.name}>{user?.name ?? "게스트"}</Text>
-            <Text style={styles.email}>{user?.email ?? "-"}</Text>
             {user?.affiliation ? <Text style={styles.meta}>{user.affiliation}</Text> : null}
             <Text style={styles.meta}>{user?.phone ?? "전화번호 미등록"}</Text>
 
             <Pressable style={styles.editButton} onPress={handleStartEdit}>
               <Text style={styles.editButtonText}>정보 수정</Text>
             </Pressable>
-
-            <Pressable style={styles.logoutButton} onPress={clear}>
-              <Text style={styles.logoutText}>로그아웃</Text>
-            </Pressable>
           </>
         )}
-      </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>이메일</Text>
+          <EmailListEditor
+            emails={emails}
+            onAdd={async (email) => {
+              await usersApi.addEmail(email);
+              await loadEmails();
+            }}
+            onSetPrimary={async (id) => {
+              const updated = await usersApi.setPrimaryEmail(id);
+              updateUser(updated);
+              await loadEmails();
+            }}
+            onRemove={async (id) => {
+              await usersApi.removeEmail(id);
+              await loadEmails();
+            }}
+          />
+        </View>
+
+        <Pressable style={styles.logoutButton} onPress={clear}>
+          <Text style={styles.logoutText}>로그아웃</Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  content: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
+  content: { flexGrow: 1, alignItems: "center", paddingHorizontal: 24, paddingVertical: 32 },
   avatar: {
     width: 88,
     height: 88,
@@ -178,7 +207,6 @@ const styles = StyleSheet.create({
   },
   avatarBadgeText: { color: "#fff", fontWeight: "700", fontSize: 16, lineHeight: 18 },
   name: { fontSize: 18, fontWeight: "700" },
-  email: { color: "#888", marginTop: 4 },
   meta: { color: "#888", marginTop: 2 },
   editButton: {
     marginTop: 20,
@@ -205,4 +233,6 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontWeight: "600", color: "#111" },
   saveButton: { backgroundColor: "#111" },
   saveButtonText: { color: "#fff", fontWeight: "600" },
+  section: { width: "100%", marginTop: 32 },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#111", marginBottom: 8 },
 });
