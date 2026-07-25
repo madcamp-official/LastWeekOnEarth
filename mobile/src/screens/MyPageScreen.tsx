@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -14,11 +15,54 @@ import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi } from "../services/usersApi";
+import { PhoneNumberInput } from "../components/PhoneNumberInput";
+
+const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
+
+// react-native-google-signin은 네이티브 전용 모듈이라 웹 프리뷰에서는 로드하지 않는다 (LoginScreen과 동일).
+const GoogleSigninModule = Platform.OS === "web" ? null : require("@react-native-google-signin/google-signin");
+const GoogleSignin = GoogleSigninModule?.GoogleSignin;
 
 export function MyPageScreen() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const clear = useAuthStore((s) => s.clear);
+
+  const signOutOfGoogle = async () => {
+    try {
+      await GoogleSignin?.signOut();
+    } catch {
+      // 구글 세션이 없었던 경우 등은 무시한다.
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOutOfGoogle();
+    clear();
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert("정말 탈퇴하시겠어요?", "내 주소록, 그룹 등 모든 데이터가 삭제되고 되돌릴 수 없습니다.", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "탈퇴",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await usersApi.deleteAccount();
+            await signOutOfGoogle();
+            clear();
+          } catch (err) {
+            const message =
+              axios.isAxiosError(err) && err.response?.data?.error
+                ? err.response.data.error
+                : "탈퇴 처리 중 오류가 발생했습니다.";
+            Alert.alert("탈퇴 실패", message);
+          }
+        },
+      },
+    ]);
+  };
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -66,6 +110,10 @@ export function MyPageScreen() {
       Alert.alert("이름을 입력해주세요.");
       return;
     }
+    if (phone.trim() && !PHONE_REGEX.test(phone.trim())) {
+      Alert.alert("전화번호를 빈칸 없이 모두 입력해주세요.");
+      return;
+    }
     setSaving(true);
     try {
       const updated = await usersApi.updateProfile({
@@ -109,13 +157,7 @@ export function MyPageScreen() {
               value={affiliation}
               onChangeText={setAffiliation}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="전화번호"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-            />
+            <PhoneNumberInput value={phone} onChangeValue={setPhone} editable={!saving} />
             <Text style={styles.email}>{user?.email ?? "-"}</Text>
 
             <View style={styles.formActions}>
@@ -138,8 +180,12 @@ export function MyPageScreen() {
               <Text style={styles.editButtonText}>정보 수정</Text>
             </Pressable>
 
-            <Pressable style={styles.logoutButton} onPress={clear}>
+            <Pressable style={styles.logoutButton} onPress={handleLogout}>
               <Text style={styles.logoutText}>로그아웃</Text>
+            </Pressable>
+
+            <Pressable style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+              <Text style={styles.deleteAccountText}>회원탈퇴</Text>
             </Pressable>
           </>
         )}
@@ -197,6 +243,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   logoutText: { fontWeight: "600", color: "#B00020" },
+  deleteAccountButton: { marginTop: 16, padding: 8 },
+  deleteAccountText: { color: "#9CA3AF", fontSize: 12, textDecorationLine: "underline" },
   form: { width: "100%", gap: 10, marginTop: 8 },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, width: "100%" },
   formActions: { flexDirection: "row", gap: 8, marginTop: 8 },

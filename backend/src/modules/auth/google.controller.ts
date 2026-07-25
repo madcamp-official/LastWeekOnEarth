@@ -2,18 +2,7 @@ import type { Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { verifyGoogleIdToken } from "../../lib/googleAuth";
 import { issueTokens } from "../../lib/issueTokens";
-
-async function generateUniqueUsername(base: string): Promise<string> {
-  const normalized = base.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20) || "user";
-
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const candidate = attempt === 0 ? normalized : `${normalized}${Math.floor(1000 + Math.random() * 9000)}`;
-    const existing = await prisma.user.findUnique({ where: { username: candidate } });
-    if (!existing) return candidate;
-  }
-
-  return `${normalized}${Date.now()}`;
-}
+import { generateUniqueUsername } from "../../lib/generateUniqueUsername";
 
 /**
  * 구글 idToken 기반 로그인/가입.

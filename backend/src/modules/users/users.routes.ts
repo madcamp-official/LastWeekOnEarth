@@ -67,4 +67,14 @@ router.patch(
   }),
 );
 
+// 소유 관계(Contact, ContactGroup, CvEntry, EmailBatch/Draft, Notification, RefreshToken)는
+// schema.prisma에 onDelete: Cascade로 걸려있어 유저 삭제 시 같이 정리된다.
+router.delete(
+  "/me",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    await prisma.user.delete({ where: { id: req.user!.userId } });
+    res.status(204).send();
+  }),
+);
+
 export default router;

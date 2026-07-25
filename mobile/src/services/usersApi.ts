@@ -15,4 +15,6 @@ export const usersApi = {
 
   updateProfile: (input: ProfileUpdateInput) =>
     api.patch<AuthUser>("/users/me", input).then((res) => res.data),
+
+  deleteAccount: () => api.delete("/users/me"),
 };
