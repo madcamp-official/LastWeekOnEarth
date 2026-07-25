@@ -1,12 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Platform, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import axios from "axios";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Config from "../config";
-import { loginWithGoogle, loginWithPassword, type AuthResponse } from "../services/auth";
+import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
+import { GoogleLogo } from "../components/GoogleLogo";
 
 WebBrowser.maybeCompleteAuthSession();
+
+// 서버(email.controller.ts)와 동일한 규칙 — 형식이 안 맞으면 요청 보내기 전에 바로 알려준다.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
 // react-native-google-signin은 네이티브 전용 모듈이라 웹 프리뷰에서는 로드하지 않는다.
 const GoogleSigninModule = Platform.OS === "web" ? null : require("@react-native-google-signin/google-signin");
@@ -25,6 +41,8 @@ if (GoogleSignin) {
 
 export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const setSession = useAuthStore((s) => s.setSession);
 
   useEffect(() => {
@@ -62,16 +80,46 @@ export default function LoginScreen() {
       setSession(accessToken, refreshToken, user);
     } catch (err) {
       console.error(err);
-      Alert.alert("로그인 실패", "로그인 처리 중 오류가 발생했습니다.");
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error
+          ? err.response.data.error
+          : "로그인 처리 중 오류가 발생했습니다.";
+      Alert.alert("로그인 실패", message);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleEmailLogin() {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !password) {
+      Alert.alert("이메일과 비밀번호를 입력해주세요.");
+      return;
+    }
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      Alert.alert("올바른 이메일 형식이 아닙니다.");
+      return;
+    }
+    if (!PASSWORD_REGEX.test(password)) {
+      Alert.alert("비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.");
+      return;
+    }
+    // 계정이 없으면 서버가 자동으로 만들어준다 (처음 입력한 비밀번호가 그대로 계정 비밀번호가 됨).
+    await applyBackendLogin(loginWithEmail(trimmedEmail, password));
   }
 
   async function handleGoogleLogin() {
     if (GoogleSignin) {
       setLoading(true);
       try {
+        // signIn()은 기기에 이미 로그인된 세션이 있으면 계정 선택 없이 그대로 재사용한다.
+        // 매번 계정을 선택할 수 있도록(다른 Gmail 계정으로 전환 가능하게) 먼저 로그아웃해둔다.
+        try {
+          await GoogleSignin.signOut();
+        } catch {
+          // 로그인된 세션이 없을 때도 여기로 올 수 있어 무시한다.
+        }
+
         const signInResponse = await GoogleSignin.signIn();
         if (!isSuccessResponse(signInResponse)) return; // 사용자가 취소함
 
@@ -103,10 +151,6 @@ export default function LoginScreen() {
     await promptAsync();
   }
 
-  async function handleTestLogin() {
-    await applyBackendLogin(loginWithPassword("alice", "password123"));
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
@@ -124,18 +168,46 @@ export default function LoginScreen() {
           ) : (
             <>
               <View style={styles.googleIcon}>
-                <Text style={styles.googleIconText}>G</Text>
+                <GoogleLogo size={20} />
               </View>
               <Text style={styles.googleButtonText}>Google로 계속하기</Text>
             </>
           )}
         </TouchableOpacity>
 
-        {Platform.OS === "web" && (
-          <TouchableOpacity style={styles.testLoginButton} onPress={handleTestLogin} disabled={loading}>
-            <Text style={styles.testLoginText}>테스트 계정으로 로그인 (alice)</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>또는</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <TextInput
+          style={styles.input}
+          placeholder="이메일"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          editable={!loading}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="비밀번호 (영문+숫자 6자 이상)"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          editable={!loading}
+        />
+        <Text style={styles.emailHint}>처음 로그인하는 이메일이면 자동으로 계정이 만들어져요.</Text>
+
+        <TouchableOpacity
+          style={styles.emailButton}
+          onPress={handleEmailLogin}
+          disabled={loading}
+          activeOpacity={0.8}
+        >
+          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -160,14 +232,29 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 20,
     height: 20,
-    borderRadius: 10,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
     marginRight: 12,
   },
-  googleIconText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   googleButtonText: { fontSize: 16, fontWeight: "600", color: "#1F1F1F" },
-  testLoginButton: { marginTop: 16, padding: 8 },
-  testLoginText: { color: "#9CA3AF", fontSize: 13, textDecorationLine: "underline" },
+  divider: { flexDirection: "row", alignItems: "center", width: "100%", marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E5E7EB" },
+  dividerText: { marginHorizontal: 12, color: "#9CA3AF", fontSize: 12 },
+  input: {
+    width: "100%",
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#DADCE0",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  emailHint: { color: "#9CA3AF", fontSize: 12, marginBottom: 14, alignSelf: "flex-start" },
+  emailButton: {
+    width: "100%",
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#111",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emailButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
 });

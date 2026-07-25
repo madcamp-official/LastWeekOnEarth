@@ -1,18 +1,11 @@
-import { Platform } from "react-native";
-
-// react-native-config는 네이티브 빌드 시점에 .env를 주입하는 방식이라 웹 번들에서는 동작하지 않는다.
-// 웹에서는 Expo가 빌드 시점에 인라인해주는 EXPO_PUBLIC_* 환경변수로 대체한다.
-// (일반 process.env.FOO는 클라이언트 번들에 값이 안 들어가고 undefined로 남는다 — EXPO_PUBLIC_ 접두사 필수.)
-const NativeConfig = Platform.OS === "web" ? null : require("react-native-config").default;
-
+// TEMP(로컬 테스트용): react-native-config의 안드로이드 네이티브 빌드 값 주입이 이 Expo prebuild
+// 환경에서 확인이 안 돼서(생성된 빌드 산출물 어디에도 값이 안 보임), 검증된 EXPO_PUBLIC_* 인라인
+// 방식으로 모든 플랫폼을 통일해뒀다. 원래 코드(NativeConfig 분기)는 팀원과 상의 후 복원할 것.
 const Config = {
-  // Expo 앱에서는 EXPO_PUBLIC_* 값이 웹과 네이티브 모두에 주입된다.
-  // react-native-config 값은 기존 네이티브 빌드와의 호환을 위한 fallback으로만 사용한다.
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL ?? NativeConfig?.API_BASE_URL,
-  GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? NativeConfig?.GOOGLE_WEB_CLIENT_ID,
-  GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? NativeConfig?.GOOGLE_IOS_CLIENT_ID,
-  GOOGLE_ANDROID_CLIENT_ID:
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? NativeConfig?.GOOGLE_ANDROID_CLIENT_ID,
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL,
+  GOOGLE_WEB_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  GOOGLE_IOS_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  GOOGLE_ANDROID_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
 };
 
 export default Config;
