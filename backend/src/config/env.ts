@@ -13,6 +13,8 @@ const envSchema = z.object({
   SMS_API_SECRET: z.string().optional().default(""),
   ANTHROPIC_API_KEY: z.string().optional().default(""),
   ANTHROPIC_MODEL: z.string().default("claude-sonnet-4-6"),
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_MODEL: z.string().default("gemini-3.6-flash"),
   MAIL_SEND_API_KEY: z.string().optional().default(""),
   // 웹/iOS/Android 클라이언트 ID를 콤마로 구분해 등록 (Google Cloud Console에서 각각 발급)
   GOOGLE_CLIENT_IDS: z.string().min(1, "GOOGLE_CLIENT_IDS is required"),

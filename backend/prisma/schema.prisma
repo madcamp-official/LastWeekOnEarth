@@ -197,6 +197,8 @@ model EmailDraft {
   batch       EmailBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
   subject     String
   body        String
+  // "EMAIL" | "TEXT" — 이메일 초안인지 문자(SMS/카카오 등) 초안인지
+  channel     String      @default("EMAIL")
   status      String      @default("DRAFT")
   scheduledAt DateTime?
   createdAt   DateTime    @default(now())
