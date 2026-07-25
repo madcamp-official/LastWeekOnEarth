@@ -57,10 +57,18 @@ describe("contacts routes", () => {
     const createRes = await request(app)
       .post("/api/contacts")
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ name: "홍길동", affiliation: "OO회사", email: "hong@example.com", phone: "010-1234-5678", memo: "meetup" });
+      .send({
+        name: "홍길동",
+        affiliation: "OO회사",
+        email: "hong@example.com",
+        phone: "010-1234-5678",
+        memo: "meetup",
+        contactMethod: "KAKAO",
+      });
 
     expect(createRes.status).toBe(201);
     expect(createRes.body.source).toBe("MANUAL");
+    expect(createRes.body.contactMethod).toBe("KAKAO");
 
     const listRes = await request(app).get("/api/contacts").set("Authorization", `Bearer ${ownerToken}`);
     expect(listRes.status).toBe(200);
@@ -88,9 +96,10 @@ describe("contacts routes", () => {
     const updateRes = await request(app)
       .patch(`/api/contacts/${createRes.body.id}`)
       .set("Authorization", `Bearer ${ownerToken}`)
-      .send({ name: "수정후" });
+      .send({ name: "수정후", contactMethod: "CALL" });
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.name).toBe("수정후");
+    expect(updateRes.body.contactMethod).toBe("CALL");
 
     const deleteRes = await request(app)
       .delete(`/api/contacts/${createRes.body.id}`)

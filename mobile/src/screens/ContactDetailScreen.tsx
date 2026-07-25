@@ -4,11 +4,28 @@ import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
-import { contactsApi, type Contact, type ContactEmail, type ContactLog } from "../services/contactsApi";
+import {
+  contactsApi,
+  type Contact,
+  type ContactEmail,
+  type ContactLog,
+  type ContactMethod,
+} from "../services/contactsApi";
 import { confirmAction } from "../utils/confirm";
 import { EmailListEditor } from "../components/EmailListEditor";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
+
+const CONTACT_METHOD_OPTIONS: { label: string; value: ContactMethod }[] = [
+  { label: "이메일", value: "EMAIL" },
+  { label: "카카오톡", value: "KAKAO" },
+  { label: "전화", value: "CALL" },
+  { label: "기타", value: "OTHER" },
+];
+
+function formatContactMethod(method: ContactMethod): string {
+  return CONTACT_METHOD_OPTIONS.find((option) => option.value === method)?.label ?? "기타";
+}
 
 export function ContactDetailScreen({ route, navigation }: Props) {
   const { contactId } = route.params;
@@ -23,6 +40,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   const [phone, setPhone] = useState("");
   const [memo, setMemo] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [contactMethod, setContactMethod] = useState<ContactMethod>("OTHER");
 
   const loadEmails = useCallback(async () => {
     setEmails(await contactsApi.listEmails(contactId));
@@ -63,6 +81,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
     setPhone(contact.phone ?? "");
     setMemo(contact.memo ?? "");
     setPhotoUrl(contact.photoUrl);
+    setContactMethod(contact.contactMethod ?? "OTHER");
     setEditing(true);
   };
 
@@ -94,10 +113,11 @@ export function ContactDetailScreen({ route, navigation }: Props) {
     try {
       const updated = await contactsApi.update(contactId, {
         name: name.trim(),
-        affiliation: affiliation.trim() || undefined,
-        phone: phone.trim() || undefined,
-        memo: memo.trim() || undefined,
-        photoUrl: photoUrl ?? undefined,
+        affiliation: affiliation.trim() || null,
+        phone: phone.trim() || null,
+        memo: memo.trim() || null,
+        photoUrl,
+        contactMethod,
       });
       setContact(updated);
       setEditing(false);
@@ -130,6 +150,22 @@ export function ContactDetailScreen({ route, navigation }: Props) {
           onChangeText={setPhone}
           keyboardType="phone-pad"
         />
+
+        <Text style={styles.label}>연락 방법</Text>
+        <View style={styles.optionRow}>
+          {CONTACT_METHOD_OPTIONS.map((option) => (
+            <Pressable
+              key={option.value}
+              style={[styles.optionChip, contactMethod === option.value && styles.optionChipActive]}
+              onPress={() => setContactMethod(option.value)}
+            >
+              <Text style={[styles.optionText, contactMethod === option.value && styles.optionTextActive]}>
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
         <TextInput
           style={[styles.input, styles.memo]}
           placeholder="메모"
@@ -137,6 +173,26 @@ export function ContactDetailScreen({ route, navigation }: Props) {
           onChangeText={setMemo}
           multiline
         />
+
+        <View style={styles.editSection}>
+          <Text style={styles.sectionTitle}>이메일</Text>
+          <EmailListEditor
+            emails={emails}
+            onAdd={async (value) => {
+              await contactsApi.addEmail(contactId, value);
+              await loadEmails();
+            }}
+            onSetPrimary={async (id) => {
+              const updated = await contactsApi.setPrimaryEmail(contactId, id);
+              setContact(updated);
+              await loadEmails();
+            }}
+            onRemove={async (id) => {
+              await contactsApi.removeEmail(contactId, id);
+              await loadEmails();
+            }}
+          />
+        </View>
 
         <View style={styles.actions}>
           <Pressable style={[styles.button, styles.cancelButton]} onPress={() => setEditing(false)} disabled={saving}>
@@ -152,33 +208,45 @@ export function ContactDetailScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.container}>
-      {contact.photoUrl ? (
-        <Image source={{ uri: contact.photoUrl }} style={styles.detailPhoto} />
-      ) : null}
-      <Text style={styles.name}>{contact.name}</Text>
-      <Text style={styles.meta}>{contact.affiliation ?? "-"}</Text>
-      <Text style={styles.meta}>{contact.phone ?? "-"}</Text>
+      <View style={styles.detailHeader}>
+        <View style={styles.detailInfo}>
+          <Text style={styles.name}>{contact.name}</Text>
+          <Text style={styles.meta}>{contact.affiliation ?? "-"}</Text>
+          <Text style={styles.meta}>{contact.phone ?? "-"}</Text>
+        </View>
+        {contact.photoUrl ? (
+          <Image source={{ uri: contact.photoUrl }} style={styles.detailPhoto} />
+        ) : (
+          <View style={[styles.detailPhoto, styles.detailPhotoPlaceholder]}>
+            <Text style={styles.detailPhotoPlaceholderText}>{contact.name[0] ?? "?"}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.contactMethodRow}>
+        <Text style={styles.contactMethodLabel}>연락 방법</Text>
+        <Text style={styles.contactMethodValue}>
+          {formatContactMethod(contact.contactMethod ?? "OTHER")}
+        </Text>
+      </View>
       {contact.memo ? <Text style={styles.memoText}>{contact.memo}</Text> : null}
       <Text style={styles.badge}>{contact.source === "BLE" ? "BLE로 태깅됨" : "수동 등록"}</Text>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>이메일</Text>
-        <EmailListEditor
-          emails={emails}
-          onAdd={async (value) => {
-            await contactsApi.addEmail(contactId, value);
-            await loadEmails();
-          }}
-          onSetPrimary={async (id) => {
-            const updated = await contactsApi.setPrimaryEmail(contactId, id);
-            setContact(updated);
-            await loadEmails();
-          }}
-          onRemove={async (id) => {
-            await contactsApi.removeEmail(contactId, id);
-            await loadEmails();
-          }}
-        />
+        {emails.length === 0 ? (
+          <Text style={styles.empty}>등록된 이메일이 없습니다.</Text>
+        ) : (
+          emails.map((item) => (
+            <View key={item.id} style={styles.emailRow}>
+              <Text style={styles.emailText}>{item.email}</Text>
+              {item.isPrimary ? (
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryBadgeText}>대표</Text>
+                </View>
+              ) : null}
+            </View>
+          ))
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -210,9 +278,23 @@ export function ContactDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
-  detailPhoto: { width: 88, height: 88, borderRadius: 12, marginBottom: 12 },
+  detailHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 16 },
+  detailInfo: { flex: 1 },
+  detailPhoto: { width: 88, height: 88, borderRadius: 12 },
+  detailPhotoPlaceholder: { backgroundColor: "#F2F2F2", alignItems: "center", justifyContent: "center" },
+  detailPhotoPlaceholderText: { color: "#888", fontSize: 30, fontWeight: "700" },
   name: { fontSize: 22, fontWeight: "700" },
   meta: { color: "#666", marginTop: 4 },
+  contactMethodRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16 },
+  contactMethodLabel: { color: "#666", fontWeight: "600" },
+  contactMethodValue: {
+    color: "#4285F4",
+    fontWeight: "700",
+    backgroundColor: "#EEF3FF",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
   memoText: { marginTop: 8, fontStyle: "italic" },
   badge: { marginTop: 8, color: "#111", fontWeight: "600" },
   actions: { flexDirection: "row", gap: 8, marginTop: 16 },
@@ -223,6 +305,18 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "600" },
   sectionTitle: { fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8 },
   section: { marginTop: 8 },
+  editSection: { marginBottom: 8 },
+  emailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  emailText: { flexShrink: 1 },
+  primaryBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  primaryBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 11 },
   empty: { color: "#999" },
   logRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#eee" },
   photoPicker: {
@@ -238,5 +332,17 @@ const styles = StyleSheet.create({
   photo: { width: 88, height: 88 },
   photoPlaceholder: { textAlign: "center", color: "#999", fontWeight: "600" },
   input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, marginBottom: 12 },
+  label: { fontWeight: "600", marginBottom: 8 },
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  optionChip: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  optionChipActive: { backgroundColor: "#111", borderColor: "#111" },
+  optionText: { color: "#111", fontWeight: "600" },
+  optionTextActive: { color: "#fff" },
   memo: { height: 80, textAlignVertical: "top" },
 });

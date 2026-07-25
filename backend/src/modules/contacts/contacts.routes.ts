@@ -15,12 +15,13 @@ router.use(requireAuth);
 
 const contactCreateSchema = z.object({
   name: z.string().min(1),
-  affiliation: z.string().optional(),
+  affiliation: z.string().nullable().optional(),
   email: z.string().email().optional(),
-  phone: z.string().optional(),
-  memo: z.string().optional(),
+  phone: z.string().nullable().optional(),
+  memo: z.string().nullable().optional(),
   // 사진은 별도 스토리지 연동 전까지 base64 data URL 문자열을 그대로 저장한다 (User.avatarUrl과 동일 방식).
-  photoUrl: z.string().max(5_000_000).optional(),
+  photoUrl: z.string().max(5_000_000).nullable().optional(),
+  contactMethod: z.enum(["EMAIL", "KAKAO", "CALL", "OTHER"]).optional(),
 });
 
 const contactUpdateSchema = contactCreateSchema.partial();

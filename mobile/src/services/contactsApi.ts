@@ -2,6 +2,7 @@ import { api } from "./api";
 
 export type ContactSource = "MANUAL" | "BLE";
 export type LogChannel = "EMAIL" | "CALL" | "MEETING" | "OTHER";
+export type ContactMethod = "EMAIL" | "KAKAO" | "CALL" | "OTHER";
 
 export interface Contact {
   id: string;
@@ -11,6 +12,7 @@ export interface Contact {
   phone: string | null;
   memo: string | null;
   photoUrl: string | null;
+  contactMethod: ContactMethod;
   source: ContactSource;
   lastContactedAt: string | null;
   createdAt: string;
@@ -34,11 +36,12 @@ export interface ContactLog {
 
 export interface ContactInput {
   name: string;
-  affiliation?: string;
+  affiliation?: string | null;
   email?: string;
-  phone?: string;
-  memo?: string;
-  photoUrl?: string;
+  phone?: string | null;
+  memo?: string | null;
+  photoUrl?: string | null;
+  contactMethod?: ContactMethod;
 }
 
 export const contactsApi = {

@@ -32,8 +32,8 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  contactsOwned      Contact[]            @relation("OwnerContacts")
-  contactsTagged     Contact[]            @relation("TargetUser")
+  contactsOwned      Contact[]           @relation("OwnerContacts")
+  contactsTagged     Contact[]           @relation("TargetUser")
   groups             ContactGroup[]
   cvEntries          CvEntry[]
   mailDrafts         EmailDraft[]
@@ -96,6 +96,7 @@ model Contact {
   phone           String?
   memo            String?
   photoUrl        String?
+  contactMethod   String    @default("OTHER")
   source          String    @default("MANUAL")
   lastContactedAt DateTime?
   createdAt       DateTime  @default(now())
