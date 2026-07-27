@@ -78,7 +78,11 @@ router.delete(
   }),
 );
 
+<<<<<<< HEAD
 // --- 여러 이메일 관리 (구글 로그인 계정 외 학교 도메인 이메일 등 추가 등록, 대표 이메일 선정) ---
+=======
+// --- 여러 이메일 관리 (contacts.routes.ts의 ContactEmail과 동일한 패턴) ---
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
 
 router.get(
   "/me/emails",
@@ -92,18 +96,35 @@ router.get(
   }),
 );
 
+<<<<<<< HEAD
 const emailAddSchema = z.object({ email: z.string().email() });
+=======
+const userEmailAddSchema = z.object({ email: z.string().email() });
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
 
 router.post(
   "/me/emails",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     await ensureUserPrimaryEmail(req.user!.userId);
+<<<<<<< HEAD
     const { email } = emailAddSchema.parse(req.body);
 
     try {
       const created = await prisma.userEmail.create({
         data: { userId: req.user!.userId, email, isPrimary: false },
       });
+=======
+    const { email } = userEmailAddSchema.parse(req.body);
+    const isFirst = (await prisma.userEmail.count({ where: { userId: req.user!.userId } })) === 0;
+
+    try {
+      const created = await prisma.userEmail.create({
+        data: { userId: req.user!.userId, email, isPrimary: isFirst },
+      });
+      if (isFirst) {
+        await prisma.user.update({ where: { id: req.user!.userId }, data: { email } });
+      }
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
       res.status(201).json(created);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -115,10 +136,17 @@ router.post(
 );
 
 router.post(
+<<<<<<< HEAD
   "/me/emails/:id/primary",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const target = await prisma.userEmail.findFirst({
       where: { id: req.params.id, userId: req.user!.userId },
+=======
+  "/me/emails/:emailId/primary",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const target = await prisma.userEmail.findFirst({
+      where: { id: req.params.emailId, userId: req.user!.userId },
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
     });
     if (!target) {
       throw new HttpError(404, "이메일을 찾을 수 없습니다.");
@@ -130,6 +158,7 @@ router.post(
         data: { isPrimary: false },
       }),
       prisma.userEmail.update({ where: { id: target.id }, data: { isPrimary: true } }),
+<<<<<<< HEAD
       prisma.user.update({
         where: { id: req.user!.userId },
         data: { email: target.email, emailVerified: false },
@@ -138,14 +167,28 @@ router.post(
 
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.userId } });
     res.json(toPublicUser(user));
+=======
+      prisma.user.update({ where: { id: req.user!.userId }, data: { email: target.email } }),
+    ]);
+
+    const updated = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.userId } });
+    res.json(toPublicUser(updated));
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
   }),
 );
 
 router.delete(
+<<<<<<< HEAD
   "/me/emails/:id",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const target = await prisma.userEmail.findFirst({
       where: { id: req.params.id, userId: req.user!.userId },
+=======
+  "/me/emails/:emailId",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const target = await prisma.userEmail.findFirst({
+      where: { id: req.params.emailId, userId: req.user!.userId },
+>>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
     });
     if (!target) {
       throw new HttpError(404, "이메일을 찾을 수 없습니다.");
