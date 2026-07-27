@@ -6,7 +6,9 @@ export const BLE_RSSI_THRESHOLD = -50;
 
 // 웹(Expo web)에는 BLE 관련 네이티브 모듈이 없으므로, 웹에서는 모듈 로드 자체를 건너뛴다.
 const BleManager = Platform.OS === "web" ? null : require("react-native-ble-plx").BleManager;
-const BLEAdvertiser = Platform.OS === "web" ? null : require("react-native-ble-advertiser").default;
+// react-native-ble-advertiser는 Android 전용 네이티브 구현만 있다 (iOS 광고 미지원, 위 startAdvertising
+// 주석 참고). iOS에서 require하면 네이티브 모듈이 없어 default가 null이 되어 즉시 크래시하므로 건너뛴다.
+const BLEAdvertiser = Platform.OS === "android" ? require("react-native-ble-advertiser").default : null;
 
 export const bleManager = Platform.OS === "web" ? null : new BleManager();
 

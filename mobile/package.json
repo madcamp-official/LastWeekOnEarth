@@ -13,8 +13,6 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
-    "@react-native-firebase/app": "^20.4.0",
-    "@react-native-firebase/messaging": "^20.4.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "@react-native/js-polyfills": "^0.76.9",
     "@react-navigation/bottom-tabs": "^6.6.1",
