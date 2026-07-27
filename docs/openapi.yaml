@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Aura API
+  title: Anchora API
   description: >
     인맥관리 앱 (BLE 명함 교환 + 리멤버 스타일 관리) API 명세.
     현재 백엔드 라우트는 이 명세를 기준으로 한 스텁(501 Not Implemented)이며,

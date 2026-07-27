@@ -1,4 +1,4 @@
-# Aura
+# Anchora
 몰입캠프 26s-w4-c2-04 프로젝트 repository
 
 인맥관리 앱 (BLE 명함 교환 + 리멤버 스타일 관리)
