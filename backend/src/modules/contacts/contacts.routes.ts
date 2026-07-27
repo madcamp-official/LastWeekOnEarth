@@ -39,6 +39,19 @@ async function findOwnedContactOrThrow(id: string, ownerUserId: string) {
   return contact;
 }
 
+// 수동으로 입력한 email+phone이 실제 가입 계정과 일치하면 targetUserId로 연동한다(BLE 태깅과 동일한 방식).
+// 본인 계정과 일치하는 경우는 연동하지 않는다(자기 자신을 태깅할 수 없는 것과 동일한 이유).
+async function findLinkedUserId(
+  email: string | null | undefined,
+  phone: string | null | undefined,
+  ownerUserId: string,
+): Promise<string | null> {
+  if (!email || !phone) return null;
+  const matched = await prisma.user.findFirst({ where: { email, phone } });
+  if (!matched || matched.id === ownerUserId) return null;
+  return matched.id;
+}
+
 router.get(
   "/",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
@@ -54,8 +67,9 @@ router.post(
   "/",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const body = contactCreateSchema.parse(req.body);
+    const targetUserId = await findLinkedUserId(body.email, body.phone, req.user!.userId);
     const contact = await prisma.contact.create({
-      data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL" },
+      data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL", targetUserId },
     });
     if (contact.email) {
       await ensureContactPrimaryEmail(contact.id);
@@ -138,9 +152,20 @@ router.get(
 router.patch(
   "/:id",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    const existing = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
     const body = contactUpdateSchema.parse(req.body);
-    const updated = await prisma.contact.update({ where: { id: req.params.id }, data: body });
+
+    const nextEmail = "email" in body ? body.email : existing.email;
+    const nextPhone = "phone" in body ? body.phone : existing.phone;
+    const targetUserId =
+      "email" in body || "phone" in body
+        ? await findLinkedUserId(nextEmail, nextPhone, req.user!.userId)
+        : undefined;
+
+    const updated = await prisma.contact.update({
+      where: { id: req.params.id },
+      data: targetUserId !== undefined ? { ...body, targetUserId } : body,
+    });
     res.json(updated);
   }),
 );

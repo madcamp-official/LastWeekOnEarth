@@ -154,7 +154,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>LastWeekOnEarth</Text>
+        <Text style={styles.title}>Aura</Text>
         <Text style={styles.subtitle}>구글 계정으로 로그인하세요</Text>
 
         <TouchableOpacity
