@@ -1,5 +1,5 @@
-import React, { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
@@ -16,6 +16,7 @@ const STATUS_LABEL: Record<MailDraft["status"], string> = {
 export function MailListScreen({ navigation }: Props) {
   const [drafts, setDrafts] = useState<MailDraft[]>([]);
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,6 +33,23 @@ export function MailListScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  const filteredDrafts = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return drafts;
+
+    return drafts.filter((draft) =>
+      [
+        draft.contact?.name,
+        draft.contact?.affiliation,
+        draft.group?.name,
+        draft.subject,
+        draft.body,
+        draft.channel === "EMAIL" ? "이메일" : "문자",
+        STATUS_LABEL[draft.status],
+      ].some((value) => value?.toLocaleLowerCase().includes(normalizedQuery)),
+    );
+  }, [drafts, query]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -41,14 +59,27 @@ export function MailListScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
+      <TextInput
+        style={styles.searchInput}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="이름, 제목, 내용으로 초안 검색"
+        returnKeyType="search"
+        clearButtonMode="while-editing"
+      />
+
       <FlatList
-        data={drafts}
+        data={filteredDrafts}
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.empty}>아직 작성한 초안이 없습니다. AI로 연락 초안을 만들어보세요.</Text>
+          <Text style={styles.empty}>
+            {query.trim()
+              ? "검색 결과가 없습니다."
+              : "아직 작성한 초안이 없습니다. AI로 연락 초안을 만들어보세요."}
+          </Text>
         }
         renderItem={({ item }) => (
           <Pressable
@@ -56,7 +87,9 @@ export function MailListScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("MailDraftDetail", { draftId: item.id })}
           >
             <View style={styles.rowInfo}>
-              <Text style={styles.rowName}>{item.contact?.name ?? "삭제된 인맥"}</Text>
+              <Text style={styles.rowName}>
+                {item.contact?.name ?? (item.group ? `${item.group.name} (그룹 공통)` : "삭제된 인맥")}
+              </Text>
               <Text style={styles.rowSubject} numberOfLines={1}>
                 {item.channel === "EMAIL" ? item.subject || "(제목 없음)" : item.body}
               </Text>
@@ -80,6 +113,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "700" },
   addButton: { backgroundColor: "#111", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: "#fff", fontWeight: "600" },
+  searchInput: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   list: { paddingHorizontal: 16, gap: 8, paddingBottom: 16 },
   row: {
     flexDirection: "row",

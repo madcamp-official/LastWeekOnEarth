@@ -92,12 +92,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", width: "100%", marginBottom: 10 },
   box: {
     flex: 1,
+    minWidth: 0,
     height: 48,
     borderWidth: 1,
     borderColor: "#DADCE0",
     borderRadius: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     textAlign: "center",
   },
-  dash: { marginHorizontal: 6, color: "#9CA3AF", fontWeight: "600" },
+  dash: { marginHorizontal: 4, color: "#9CA3AF", fontWeight: "600" },
 });

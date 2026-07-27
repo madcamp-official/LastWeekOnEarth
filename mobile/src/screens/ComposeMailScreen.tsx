@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
-import { mailApi, type MailChannel } from "../services/mailApi";
+import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
 
 type Props = NativeStackScreenProps<MailStackParamList, "ComposeMail">;
 type RecipientMode = "CONTACT" | "GROUP";
@@ -17,6 +17,21 @@ const CHANNELS: { label: string; value: MailChannel }[] = [
   { label: "이메일", value: "EMAIL" },
   { label: "문자", value: "TEXT" },
 ];
+const GROUP_DRAFT_MODES: { label: string; value: GroupDraftMode }[] = [
+  { label: "공통 초안 1개", value: "SHARED" },
+  { label: "구성원별 개별 초안", value: "PER_MEMBER" },
+];
+
+// 축하 대상을 추가로 골라야 하는 상황인지 (백엔드 isCelebrationOccasion과 동일 기준).
+function isCelebrationOccasion(occasion: string | null): boolean {
+  if (!occasion) return false;
+  return occasion.includes("축하") || occasion.includes("생일");
+}
+
+// 생일은 축하 사유가 이미 분명하므로 별도 상세 입력을 받지 않는다.
+function requiresCelebrationDetail(occasion: string | null): boolean {
+  return isCelebrationOccasion(occasion) && !occasion?.includes("생일");
+}
 
 function getErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err) && err.response?.data?.error) {
@@ -36,6 +51,10 @@ export function ComposeMailScreen({ navigation }: Props) {
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [groupDraftMode, setGroupDraftMode] = useState<GroupDraftMode>("SHARED");
+  const [groupMembers, setGroupMembers] = useState<Contact[]>([]);
+  const [loadingGroupMembers, setLoadingGroupMembers] = useState(false);
+  const [celebrantContactId, setCelebrantContactId] = useState<string | null>(null);
 
   const [occasion, setOccasion] = useState<string | null>(null);
   const [occasionOther, setOccasionOther] = useState("");
@@ -43,6 +62,7 @@ export function ComposeMailScreen({ navigation }: Props) {
   const [recipientTypeOther, setRecipientTypeOther] = useState("");
   const [channel, setChannel] = useState<MailChannel>("EMAIL");
   const [subject, setSubject] = useState("");
+  const [celebrationDetail, setCelebrationDetail] = useState("");
   const [generating, setGenerating] = useState(false);
 
   const loadContacts = useCallback(async () => {
@@ -68,6 +88,20 @@ export function ComposeMailScreen({ navigation }: Props) {
     loadGroups();
   }, [loadContacts, loadGroups]);
 
+  // 그룹을 고르면(그리고 선택이 바뀌면) 축하 대상 선택용으로 구성원 목록을 새로 받아온다.
+  useEffect(() => {
+    setCelebrantContactId(null);
+    if (!selectedGroupId) {
+      setGroupMembers([]);
+      return;
+    }
+    setLoadingGroupMembers(true);
+    groupsApi
+      .get(selectedGroupId)
+      .then((detail) => setGroupMembers(detail.contacts))
+      .finally(() => setLoadingGroupMembers(false));
+  }, [selectedGroupId]);
+
   const filteredContacts = useMemo(() => {
     const q = contactQuery.trim().toLowerCase();
     if (!q) return contacts;
@@ -77,10 +111,12 @@ export function ComposeMailScreen({ navigation }: Props) {
   }, [contacts, contactQuery]);
 
   const selectedContact = contacts.find((c) => c.id === selectedContactId);
-  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
+  const selectedCelebrant = groupMembers.find((c) => c.id === celebrantContactId);
 
   const resolvedOccasion = occasion === OTHER ? occasionOther.trim() : occasion;
   const resolvedRecipientType = recipientType === OTHER ? recipientTypeOther.trim() : recipientType;
+  const needsCelebrationDetail = requiresCelebrationDetail(resolvedOccasion);
+  const needsCelebrant = isCelebrationOccasion(resolvedOccasion) && recipientMode === "GROUP";
 
   const handleGenerate = async () => {
     if (recipientMode === "CONTACT" && !selectedContactId) {
@@ -99,6 +135,14 @@ export function ComposeMailScreen({ navigation }: Props) {
       Alert.alert(recipientType === OTHER ? "받는 사람 유형을 직접 입력해주세요." : "받는 사람 유형을 선택해주세요.");
       return;
     }
+    if (needsCelebrationDetail && !celebrationDetail.trim()) {
+      Alert.alert("무엇을 축하하는지 입력해주세요.");
+      return;
+    }
+    if (needsCelebrant && !celebrantContactId) {
+      Alert.alert("누구를 축하하는지 선택해주세요.");
+      return;
+    }
 
     setGenerating(true);
     try {
@@ -109,6 +153,7 @@ export function ComposeMailScreen({ navigation }: Props) {
           recipientType: resolvedRecipientType,
           channel,
           subject: channel === "EMAIL" ? subject.trim() || undefined : undefined,
+          celebrationDetail: needsCelebrationDetail ? celebrationDetail.trim() : undefined,
         });
         navigation.replace("MailDraftDetail", { draftId: draft.id });
       } else {
@@ -118,10 +163,17 @@ export function ComposeMailScreen({ navigation }: Props) {
           recipientType: resolvedRecipientType,
           channel,
           subject: channel === "EMAIL" ? subject.trim() || undefined : undefined,
+          celebrationDetail: needsCelebrationDetail ? celebrationDetail.trim() : undefined,
+          celebrantContactId: needsCelebrant ? celebrantContactId! : undefined,
+          mode: groupDraftMode,
         });
-        Alert.alert("생성 완료", `${drafts.length}개의 초안이 생성되었습니다.`, [
-          { text: "확인", onPress: () => navigation.navigate("MailList") },
-        ]);
+        if (drafts.length === 1) {
+          navigation.replace("MailDraftDetail", { draftId: drafts[0].id });
+        } else {
+          Alert.alert("생성 완료", `${drafts.length}개의 초안이 생성되었습니다.`, [
+            { text: "확인", onPress: () => navigation.navigate("MailList") },
+          ]);
+        }
       }
     } catch (err) {
       Alert.alert("초안 생성 실패", getErrorMessage(err, "AI 초안을 생성하지 못했습니다."));
@@ -178,22 +230,48 @@ export function ComposeMailScreen({ navigation }: Props) {
                 </View>
               )
             ) : (
-              <View style={styles.groupList}>
-                {groups.length === 0 ? (
-                  <Text style={styles.empty}>만든 그룹이 없습니다.</Text>
-                ) : (
-                  groups.map((group) => (
-                    <Pressable
-                      key={group.id}
-                      style={[styles.groupRow, selectedGroupId === group.id && styles.groupRowActive]}
-                      onPress={() => setSelectedGroupId(group.id)}
-                    >
-                      <Text style={styles.contactName}>{group.name}</Text>
-                      <Text style={styles.contactMeta}>{group.memberCount}명</Text>
-                    </Pressable>
-                  ))
+              <>
+                <View style={styles.groupList}>
+                  {groups.length === 0 ? (
+                    <Text style={styles.empty}>만든 그룹이 없습니다.</Text>
+                  ) : (
+                    groups.map((group) => (
+                      <Pressable
+                        key={group.id}
+                        style={[styles.groupRow, selectedGroupId === group.id && styles.groupRowActive]}
+                        onPress={() => setSelectedGroupId(group.id)}
+                      >
+                        <Text style={styles.contactName}>{group.name}</Text>
+                        <Text style={styles.contactMeta}>{group.memberCount}명</Text>
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+
+                {selectedGroupId && (
+                  <>
+                    <Text style={styles.label}>발송 방식</Text>
+                    <View style={styles.chipRow}>
+                      {GROUP_DRAFT_MODES.map((opt) => (
+                        <Pressable
+                          key={opt.value}
+                          style={[styles.chip, groupDraftMode === opt.value && styles.chipActive]}
+                          onPress={() => setGroupDraftMode(opt.value)}
+                        >
+                          <Text style={[styles.chipText, groupDraftMode === opt.value && styles.chipTextActive]}>
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <Text style={styles.hint}>
+                      {groupDraftMode === "SHARED"
+                        ? "모두에게 똑같이 보낼 초안 1개만 만들어요."
+                        : "구성원별로 이름을 넣어 각각 개인화된 초안을 만들어요."}
+                    </Text>
+                  </>
                 )}
-              </View>
+              </>
             )}
           </View>
         }
@@ -241,6 +319,51 @@ export function ComposeMailScreen({ navigation }: Props) {
                 value={occasionOther}
                 onChangeText={setOccasionOther}
               />
+            )}
+
+            {needsCelebrationDetail && (
+              <>
+                <Text style={styles.label}>무엇을 축하하나요?</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="예: 합격, 취업, 생일, 승진"
+                  value={celebrationDetail}
+                  onChangeText={setCelebrationDetail}
+                />
+              </>
+            )}
+
+            {needsCelebrant && (
+              <>
+                <Text style={styles.label}>누구를 축하하나요?</Text>
+                {selectedCelebrant ? (
+                  <View style={styles.selectedBox}>
+                    <Text style={styles.selectedBoxText}>{selectedCelebrant.name} 선택됨</Text>
+                    <Pressable onPress={() => setCelebrantContactId(null)}>
+                      <Text style={styles.clearLink}>변경</Text>
+                    </Pressable>
+                  </View>
+                ) : loadingGroupMembers ? (
+                  <ActivityIndicator color="#111" />
+                ) : (
+                  <View style={styles.groupList}>
+                    {groupMembers.length === 0 ? (
+                      <Text style={styles.empty}>그룹에 구성원이 없습니다.</Text>
+                    ) : (
+                      groupMembers.map((member) => (
+                        <Pressable
+                          key={member.id}
+                          style={styles.groupRow}
+                          onPress={() => setCelebrantContactId(member.id)}
+                        >
+                          <Text style={styles.contactName}>{member.name}</Text>
+                          <Text style={styles.contactMeta}>{member.affiliation ?? "-"}</Text>
+                        </Pressable>
+                      ))
+                    )}
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.label}>받는 사람 유형</Text>
@@ -298,6 +421,7 @@ const styles = StyleSheet.create({
   headerSection: { padding: 16, paddingBottom: 8, gap: 8 },
   footerSection: { padding: 16, gap: 8 },
   label: { fontWeight: "700", marginTop: 12, marginBottom: 4 },
+  hint: { color: "#888", fontSize: 12, marginTop: -4 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",

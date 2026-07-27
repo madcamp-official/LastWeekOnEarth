@@ -33,7 +33,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
     try {
       const updated = await mailApi.update(draftId, { subject, body });
       setDraft(updated);
-      Alert.alert("저장되었습니다.");
+      navigation.popToTop();
     } catch {
       Alert.alert("저장 실패", "초안을 저장하지 못했습니다.");
     } finally {
@@ -53,12 +53,15 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.contactName}>{draft.contact?.name ?? "삭제된 인맥"}</Text>
+        <Text style={styles.contactName}>
+          {draft.contact?.name ?? (draft.group ? `${draft.group.name} (그룹 공통)` : "삭제된 인맥")}
+        </Text>
         <View style={styles.channelBadge}>
           <Text style={styles.channelBadgeText}>{draft.channel === "EMAIL" ? "이메일" : "문자"}</Text>
         </View>
       </View>
       {draft.contact?.affiliation ? <Text style={styles.meta}>{draft.contact.affiliation}</Text> : null}
+      {draft.group ? <Text style={styles.meta}>그룹 전체에게 동일하게 발송할 공통 초안이에요.</Text> : null}
 
       {draft.channel === "EMAIL" && (
         <>

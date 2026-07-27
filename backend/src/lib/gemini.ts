@@ -5,11 +5,17 @@ export interface DraftRequest {
   channel: "EMAIL" | "TEXT";
   occasion: string;
   recipientType: string;
-  contactName: string;
+  /** 그룹 공통 초안(개인화 없음)일 때는 비워둔다. */
+  contactName?: string;
   contactAffiliation?: string | null;
   senderName: string;
   /** 사용자가 직접 입력한 이메일 제목. 있으면 AI가 새로 짓지 않고 그대로 사용한다. */
   subject?: string;
+  /** 축하/생일 등 상황일 때 "무엇을 축하하는지" (예: 합격, 승진, 생일). */
+  celebrationDetail?: string;
+  /** 그룹 중 특정 한 명을 축하하는 경우 그 사람 이름. contactName과 같은 사람이면 본인에게
+   * 직접 축하하는 문구로, 다르면 "함께 축하해요" 식으로 지어달라고 안내한다. */
+  celebrantName?: string;
 }
 
 export interface DraftResult {
@@ -31,14 +37,33 @@ interface GeminiGenerateResponse {
 function buildPrompt(req: DraftRequest): string {
   const channelLabel = req.channel === "EMAIL" ? "이메일" : "문자 메시지(SMS/카카오톡)";
 
+  const recipientLine = req.contactName
+    ? `- 받는 사람: ${req.contactName}${req.contactAffiliation ? ` (${req.contactAffiliation})` : ""}`
+    : `- 받는 사람: 그룹 구성원 전체 (한 사람이 아니라 여러 명에게 똑같이 보낼 공통 메시지야. 특정 개인 이름으로 부르지 말고 다같이 부를 수 있는 인사말로 시작해줘.)`;
+
+  const celebrationLines: string[] = [];
+  if (req.celebrationDetail) {
+    celebrationLines.push(`- 축하하는 대상/사유: ${req.celebrationDetail}`);
+  }
+  if (req.celebrantName) {
+    if (req.contactName && req.contactName === req.celebrantName) {
+      celebrationLines.push(`- 이 메시지는 축하 대상인 ${req.celebrantName}님 본인에게 직접 보내는 축하 메시지야.`);
+    } else {
+      celebrationLines.push(
+        `- 이 메시지는 ${req.celebrantName}님을 축하하는 소식을 다른 사람(들)에게 전하는 메시지야. 받는 사람이 함께 ${req.celebrantName}님을 축하할 수 있도록 문구를 작성해줘.`,
+      );
+    }
+  }
+
   return [
     `너는 인맥 관리 앱에서 사용자의 연락 초안을 대신 작성해주는 어시스턴트야.`,
     `아래 조건에 맞는 ${channelLabel} 초안을 한국어로 작성해줘.`,
     ``,
     `- 보내는 사람: ${req.senderName}`,
-    `- 받는 사람: ${req.contactName}${req.contactAffiliation ? ` (${req.contactAffiliation})` : ""}`,
+    recipientLine,
     `- 관계/받는 사람 유형: ${req.recipientType}`,
     `- 연락 목적/상황: ${req.occasion}`,
+    ...celebrationLines,
     ``,
     req.channel === "EMAIL"
       ? req.subject

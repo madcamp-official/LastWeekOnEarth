@@ -149,6 +149,7 @@ model ContactGroup {
 
   members       ContactGroupMember[]
   notifications Notification[]
+  mailDrafts    EmailDraft[]
 
   @@index([ownerUserId])
 }
@@ -207,19 +208,23 @@ model EmailDraft {
   ownerUserId String
   owner       User        @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
   contactId   String?
-  contact     Contact?    @relation(fields: [contactId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  // 그룹에게 보내는 "공통 초안 1개"일 때만 채워진다 (contactId는 이 경우 null).
+  groupId     String?
+  group       ContactGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   batchId     String?
-  batch       EmailBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  batch       EmailBatch?  @relation(fields: [batchId], references: [id], onDelete: SetNull)
   subject     String
   body        String
   // "EMAIL" | "TEXT" — 이메일 초안인지 문자(SMS/카카오 등) 초안인지
-  channel     String      @default("EMAIL")
-  status      String      @default("DRAFT")
+  channel     String       @default("EMAIL")
+  status      String       @default("DRAFT")
   scheduledAt DateTime?
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime     @default(now())
 
   @@index([ownerUserId])
   @@index([contactId])
+  @@index([groupId])
   @@index([batchId])
 }
 

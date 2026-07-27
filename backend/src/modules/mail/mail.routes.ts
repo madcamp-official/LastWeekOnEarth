@@ -28,12 +28,24 @@ async function findOwnedDraftOrThrow(id: string, ownerUserId: string) {
   return draft;
 }
 
+// "생일 축하"/"축하 인사"처럼 축하 대상을 골라야 하는 상황인지 서버에서도 한 번 더 판단.
+// 프론트 프리셋과 이름을 맞춰두되, 사용자가 "기타"로 직접 입력한 문구에도 "축하"가 들어있으면 걸리게 느슨하게 잡는다.
+function isCelebrationOccasion(occasion: string): boolean {
+  return occasion.includes("축하") || occasion.includes("생일");
+}
+
+// 생일은 축하 사유가 이미 분명하므로 별도 상세 입력을 요구하지 않는다.
+function requiresCelebrationDetail(occasion: string): boolean {
+  return isCelebrationOccasion(occasion) && !occasion.includes("생일");
+}
+
 const generateSchema = z.object({
   contactId: z.string().min(1),
   occasion: z.string().min(1),
   recipientType: z.string().min(1),
   channel: z.enum(["EMAIL", "TEXT"]),
   subject: z.string().optional(),
+  celebrationDetail: z.string().optional(),
 });
 
 // 인맥 + 상황(경조사/안부인사/명절인사 등) + 받는 사람 유형(교수님/동기/VC 심사역 등) + 채널(이메일/문자)을
@@ -42,6 +54,10 @@ router.post(
   "/generate",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const body = generateSchema.parse(req.body);
+    if (requiresCelebrationDetail(body.occasion) && !body.celebrationDetail?.trim()) {
+      throw new HttpError(400, "무엇을 축하하는지 입력해주세요.");
+    }
+
     const contact = await findOwnedContactOrThrow(body.contactId, req.user!.userId);
     const sender = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.userId } });
 
@@ -53,6 +69,8 @@ router.post(
       contactAffiliation: contact.affiliation,
       senderName: sender.name,
       subject: body.subject,
+      celebrationDetail: body.celebrationDetail,
+      celebrantName: body.celebrationDetail ? contact.name : undefined,
     });
 
     const draft = await prisma.emailDraft.create({
@@ -76,13 +94,23 @@ const batchGenerateSchema = z.object({
   recipientType: z.string().min(1),
   channel: z.enum(["EMAIL", "TEXT"]),
   subject: z.string().optional(),
+  celebrationDetail: z.string().optional(),
+  // 축하 대상인 구성원 (생일 축하/축하 인사일 때만 사용). 그 사람에게는 본인 축하 문구,
+  // 나머지 구성원에게는 "함께 축하하자"는 문구로 갈린다.
+  celebrantContactId: z.string().optional(),
+  // SHARED: 그룹 전체에게 보낼 공통 초안 1개만 생성. PER_MEMBER: 구성원별로 각각 개인화된 초안 생성.
+  mode: z.enum(["SHARED", "PER_MEMBER"]).default("PER_MEMBER"),
 });
 
-// 그룹 구성원 전체에게 같은 상황/유형/채널로 초안을 한 번에 생성한다.
+// 그룹 구성원에게 같은 상황/유형/채널로 초안을 생성한다. mode에 따라 "공통 초안 1개" 또는
+// "구성원별 개인화된 초안 여러 개" 중 하나로 만든다.
 router.post(
   "/batch-generate",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const body = batchGenerateSchema.parse(req.body);
+    if (requiresCelebrationDetail(body.occasion) && !body.celebrationDetail?.trim()) {
+      throw new HttpError(400, "무엇을 축하하는지 입력해주세요.");
+    }
 
     const group = await prisma.contactGroup.findFirst({
       where: { id: body.groupId, ownerUserId: req.user!.userId },
@@ -99,10 +127,50 @@ router.post(
       throw new HttpError(400, "그룹에 구성원이 없습니다.");
     }
 
+    if (isCelebrationOccasion(body.occasion) && !body.celebrantContactId) {
+      throw new HttpError(400, "누구를 축하하는지 선택해주세요.");
+    }
+
+    let celebrant: (typeof members)[number]["contact"] | undefined;
+    if (body.celebrantContactId) {
+      celebrant = members.find((m) => m.contactId === body.celebrantContactId)?.contact;
+      if (!celebrant) {
+        throw new HttpError(400, "선택한 구성원이 이 그룹에 없습니다.");
+      }
+    }
+
     const sender = await prisma.user.findUniqueOrThrow({ where: { id: req.user!.userId } });
+
+    if (body.mode === "SHARED") {
+      const { subject, body: draftBody } = await generateContactDraft({
+        channel: body.channel,
+        occasion: body.occasion,
+        recipientType: body.recipientType,
+        senderName: sender.name,
+        subject: body.subject,
+        celebrationDetail: body.celebrationDetail,
+        celebrantName: celebrant?.name,
+      });
+
+      const draft = await prisma.emailDraft.create({
+        data: {
+          ownerUserId: req.user!.userId,
+          groupId: group.id,
+          subject,
+          body: draftBody,
+          channel: body.channel,
+          status: "DRAFT",
+        },
+        include: { group: { select: { id: true, name: true } } },
+      });
+
+      res.status(201).json([draft]);
+      return;
+    }
 
     const drafts = [];
     for (const member of members) {
+      const isCelebrantThemself = celebrant && member.contactId === celebrant.id;
       const { subject, body: draftBody } = await generateContactDraft({
         channel: body.channel,
         occasion: body.occasion,
@@ -111,6 +179,8 @@ router.post(
         contactAffiliation: member.contact.affiliation,
         senderName: sender.name,
         subject: body.subject,
+        celebrationDetail: body.celebrationDetail,
+        celebrantName: celebrant ? (isCelebrantThemself ? member.contact.name : celebrant.name) : undefined,
       });
 
       const draft = await prisma.emailDraft.create({
@@ -136,7 +206,10 @@ router.get(
     const drafts = await prisma.emailDraft.findMany({
       where: { ownerUserId: req.user!.userId },
       orderBy: { createdAt: "desc" },
-      include: { contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } } },
+      include: {
+        contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } },
+        group: { select: { id: true, name: true } },
+      },
     });
     res.json(drafts);
   }),
@@ -147,7 +220,10 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const draft = await prisma.emailDraft.findFirst({
       where: { id: req.params.id, ownerUserId: req.user!.userId },
-      include: { contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } } },
+      include: {
+        contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } },
+        group: { select: { id: true, name: true } },
+      },
     });
     if (!draft) {
       throw new HttpError(404, "초안을 찾을 수 없습니다.");

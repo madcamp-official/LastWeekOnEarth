@@ -10,11 +10,18 @@ export interface MailDraftContact {
   photoUrl: string | null;
 }
 
+export interface MailDraftGroup {
+  id: string;
+  name: string;
+}
+
 export interface MailDraft {
   id: string;
   ownerUserId: string;
   contactId: string | null;
   contact: MailDraftContact | null;
+  groupId: string | null;
+  group: MailDraftGroup | null;
   subject: string;
   body: string;
   channel: MailChannel;
@@ -29,7 +36,11 @@ export interface GenerateDraftInput {
   recipientType: string;
   channel: MailChannel;
   subject?: string;
+  /** "축하 인사" 등일 때 무엇을 축하하는지 (예: 합격, 승진, 생일). */
+  celebrationDetail?: string;
 }
+
+export type GroupDraftMode = "SHARED" | "PER_MEMBER";
 
 export interface BatchGenerateDraftInput {
   groupId: string;
@@ -37,6 +48,11 @@ export interface BatchGenerateDraftInput {
   recipientType: string;
   channel: MailChannel;
   subject?: string;
+  celebrationDetail?: string;
+  /** 축하 상황일 때, 그룹 구성원 중 누구를 축하하는지. */
+  celebrantContactId?: string;
+  /** SHARED: 전체에게 보낼 공통 초안 1개. PER_MEMBER: 구성원별 개인화 초안 여러 개. */
+  mode: GroupDraftMode;
 }
 
 export interface DraftUpdateInput {
