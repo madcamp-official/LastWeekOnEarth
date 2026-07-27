@@ -11,7 +11,11 @@
       "web"
     ],
     "ios": {
-      "bundleIdentifier": "com.lastweekonearth.app"
+      "bundleIdentifier": "com.lastweekonearth.app",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "주변 사용자를 태깅하기 위해 블루투스를 사용합니다.",
+        "NSBluetoothPeripheralUsageDescription": "내 프로필을 주변에 알리기 위해 블루투스로 광고합니다."
+      }
     },
     "android": {
       "package": "com.lastweekonearth.app"
@@ -20,7 +24,8 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withBlePeripheralIos.js"
     ]
   }
 }
