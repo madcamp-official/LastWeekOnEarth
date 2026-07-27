@@ -14,7 +14,7 @@ import axios from "axios";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Config from "../config";
-import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/auth";
+import { loginWithEmail, loginWithGoogle, loginWithPassword, type AuthResponse } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { GoogleLogo } from "../components/GoogleLogo";
 
@@ -106,6 +106,12 @@ export default function LoginScreen() {
     }
     // 계정이 없으면 서버가 자동으로 만들어준다 (처음 입력한 비밀번호가 그대로 계정 비밀번호가 됨).
     await applyBackendLogin(loginWithEmail(trimmedEmail, password));
+  }
+
+  // 개발/데모 편의용 — backend/prisma/seed.ts로 심어둔 테스트 계정(alice)에 바로 로그인한다.
+  // 소속/전화번호까지 채워져 있어 프로필 완성 화면 없이 바로 메인 화면으로 들어간다.
+  async function handleTestLogin() {
+    await applyBackendLogin(loginWithPassword("alice", "password123"));
   }
 
   async function handleGoogleLogin() {
@@ -208,6 +214,12 @@ export default function LoginScreen() {
         >
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
         </TouchableOpacity>
+
+        {__DEV__ && (
+          <TouchableOpacity style={styles.testLoginButton} onPress={handleTestLogin} disabled={loading}>
+            <Text style={styles.testLoginText}>테스트 계정으로 로그인 (alice)</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -257,4 +269,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emailButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  testLoginButton: { marginTop: 16, padding: 8 },
+  testLoginText: { color: "#9CA3AF", fontSize: 13, textDecorationLine: "underline" },
 });

@@ -25,4 +25,13 @@ export const usersApi = {
     api.patch<AuthUser>("/users/me", input).then((res) => res.data),
 
   deleteAccount: () => api.delete("/users/me"),
+
+  listEmails: () => api.get<UserEmail[]>("/users/me/emails").then((res) => res.data),
+
+  addEmail: (email: string) => api.post<UserEmail>("/users/me/emails", { email }).then((res) => res.data),
+
+  setPrimaryEmail: (emailId: string) =>
+    api.post<AuthUser>(`/users/me/emails/${emailId}/primary`).then((res) => res.data),
+
+  removeEmail: (emailId: string) => api.delete(`/users/me/emails/${emailId}`),
 };
