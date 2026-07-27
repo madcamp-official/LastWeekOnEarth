@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import axios from "axios";
+import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
@@ -63,10 +64,15 @@ export function ComposeMailScreen({ navigation }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    loadContacts();
-    loadGroups();
-  }, [loadContacts, loadGroups]);
+  // 마운트 시 한 번만 부르면, 메일 탭에 먼저 들어갔다가 나중에 인맥을 등록한 경우
+  // (탭은 화면 언마운트 없이 유지되므로) 새로 등록한 인맥이 캐시된 목록에 없어 안 보였다.
+  // 화면에 들어올 때마다 다시 불러오도록 바꾼다.
+  useFocusEffect(
+    useCallback(() => {
+      loadContacts();
+      loadGroups();
+    }, [loadContacts, loadGroups]),
+  );
 
   const filteredContacts = useMemo(() => {
     const q = contactQuery.trim().toLowerCase();

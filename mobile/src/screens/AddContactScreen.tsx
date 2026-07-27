@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
@@ -68,7 +68,7 @@ export function AddContactScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.photo} />
@@ -119,12 +119,12 @@ export function AddContactScreen({ navigation }: Props) {
       <Pressable style={styles.button} onPress={handleSubmit} disabled={submitting}>
         <Text style={styles.buttonText}>{submitting ? "등록 중..." : "등록"}</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
+  container: { flexGrow: 1, padding: 16, gap: 12 },
   photoPicker: {
     width: 88,
     height: 88,
