@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
+import { notify } from "../utils/confirm";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
 
@@ -23,11 +24,11 @@ export default function ProfileSetupScreen() {
 
   const handleSubmit = async () => {
     if (!name.trim() || !affiliation.trim() || !phone.trim()) {
-      Alert.alert("이름, 소속, 전화번호를 모두 입력해주세요.");
+      notify("이름, 소속, 전화번호를 모두 입력해주세요.");
       return;
     }
     if (!PHONE_REGEX.test(phone.trim())) {
-      Alert.alert("전화번호를 빈칸 없이 모두 입력해주세요.");
+      notify("전화번호를 빈칸 없이 모두 입력해주세요.");
       return;
     }
     setSaving(true);
@@ -43,7 +44,7 @@ export default function ProfileSetupScreen() {
         axios.isAxiosError(err) && err.response?.data?.error
           ? err.response.data.error
           : "정보를 저장하지 못했습니다.";
-      Alert.alert("저장 실패", message);
+      notify("저장 실패", message);
     } finally {
       setSaving(false);
     }

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   SafeAreaView,
   StyleSheet,
@@ -17,6 +16,7 @@ import Config from "../config";
 import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { GoogleLogo } from "../components/GoogleLogo";
+import { notify } from "../utils/confirm";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -68,7 +68,7 @@ export default function LoginScreen() {
       }
     } else if (response.type === "error") {
       console.error(response.error);
-      Alert.alert("로그인 실패", "Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      notify("로그인 실패", "Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [response]);
@@ -84,7 +84,7 @@ export default function LoginScreen() {
         axios.isAxiosError(err) && err.response?.data?.error
           ? err.response.data.error
           : "로그인 처리 중 오류가 발생했습니다.";
-      Alert.alert("로그인 실패", message);
+      notify("로그인 실패", message);
     } finally {
       setLoading(false);
     }
@@ -93,15 +93,15 @@ export default function LoginScreen() {
   async function handleEmailLogin() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      Alert.alert("이메일과 비밀번호를 입력해주세요.");
+      notify("이메일과 비밀번호를 입력해주세요.");
       return;
     }
     if (!EMAIL_REGEX.test(trimmedEmail)) {
-      Alert.alert("올바른 이메일 형식이 아닙니다.");
+      notify("올바른 이메일 형식이 아닙니다.");
       return;
     }
     if (!PASSWORD_REGEX.test(password)) {
-      Alert.alert("비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.");
+      notify("비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.");
       return;
     }
     // 계정이 없으면 서버가 자동으로 만들어준다 (처음 입력한 비밀번호가 그대로 계정 비밀번호가 됨).
@@ -133,7 +133,7 @@ export default function LoginScreen() {
           return;
         }
         console.error(err);
-        Alert.alert("로그인 실패", "Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+        notify("로그인 실패", "Google 로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function LoginScreen() {
     }
 
     if (!Config.GOOGLE_WEB_CLIENT_ID) {
-      Alert.alert(
+      notify(
         "Google 로그인 설정 필요",
         "mobile/.env에 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID를 채운 뒤 dev 서버를 재시작해주세요.",
       );

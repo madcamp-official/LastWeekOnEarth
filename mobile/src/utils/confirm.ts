@@ -18,3 +18,14 @@ export function confirmAction(title: string, onConfirm: () => void, confirmLabel
     { text: confirmLabel, style: "destructive", onPress: onConfirm },
   ]);
 }
+
+/**
+ * 버튼 없는 단순 알림. react-native-web의 Alert.alert는 no-op이라 web에서는 window.alert로 대체한다.
+ */
+export function notify(title: string, message?: string) {
+  if (Platform.OS === "web") {
+    (globalThis as { alert?: (message: string) => void }).alert?.(message ? `${title}\n${message}` : title);
+    return;
+  }
+  Alert.alert(title, message);
+}
