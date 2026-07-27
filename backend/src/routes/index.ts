@@ -6,6 +6,7 @@ import groupsRoutes from "../modules/groups/groups.routes";
 import cvRoutes from "../modules/cv/cv.routes";
 import mailRoutes from "../modules/mail/mail.routes";
 import notificationsRoutes from "../modules/notifications/notifications.routes";
+import postsRoutes from "../modules/posts/posts.routes";
 
 const router = Router();
 
@@ -16,5 +17,6 @@ router.use("/groups", groupsRoutes);
 router.use("/cv", cvRoutes);
 router.use("/mail-drafts", mailRoutes);
 router.use("/notifications", notificationsRoutes);
+router.use("/posts", postsRoutes);
 
 export default router;

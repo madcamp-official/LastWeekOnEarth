@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { verifyGoogleIdToken } from "../../lib/googleAuth";
 import { issueTokens } from "../../lib/issueTokens";
 import { generateUniqueUsername } from "../../lib/generateUniqueUsername";
+import { createWelcomePost } from "../../lib/welcomePost";
 
 /**
  * 구글 idToken 기반 로그인/가입.
@@ -44,6 +45,8 @@ export async function googleLoginHandler(req: Request, res: Response) {
           googleId: profile.googleId,
         },
       });
+      // Google은 프로필에서 이름을 바로 받아오므로 가입 즉시 인사 소식을 올린다.
+      await createWelcomePost(user.id, user.name);
     }
   }
 

@@ -30,15 +30,8 @@ export const usersApi = {
 
   addEmail: (email: string) => api.post<UserEmail>("/users/me/emails", { email }).then((res) => res.data),
 
-<<<<<<< HEAD
   setPrimaryEmail: (emailId: string) =>
     api.post<AuthUser>(`/users/me/emails/${emailId}/primary`).then((res) => res.data),
 
   removeEmail: (emailId: string) => api.delete(`/users/me/emails/${emailId}`),
-=======
-  setPrimaryEmail: (id: string) =>
-    api.post<AuthUser>(`/users/me/emails/${id}/primary`).then((res) => res.data),
-
-  removeEmail: (id: string) => api.delete(`/users/me/emails/${id}`),
->>>>>>> 4bbc0be066ea65cd4ed276105b73b545cb13a94b
 };

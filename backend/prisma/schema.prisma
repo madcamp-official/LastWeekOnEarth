@@ -42,6 +42,21 @@ model User {
   phoneVerifications PhoneVerification[]
   refreshTokens      RefreshToken[]
   emails             UserEmail[]
+  posts              Post[]
+}
+
+// 소식(진짜 소셜 피드): 계정을 가진 사람만 쓸 수 있고, "이웃"(BLE로 연결됐거나 이메일이 일치해서
+// 서로 계정이 매칭된 인맥)만 볼 수 있다. posts.routes.ts의 neighborUserIds 계산 참고.
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  photoUrl  String?
+  createdAt DateTime @default(now())
+
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 // 사용자가 등록한 여러 이메일 (구글 로그인 계정 외 학교 도메인 이메일 등). isPrimary인 값은
