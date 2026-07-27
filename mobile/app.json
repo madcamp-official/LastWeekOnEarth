@@ -25,7 +25,12 @@
     },
     "plugins": [
       "expo-asset",
-      "./plugins/withBlePeripheralIos.js"
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.303266548663-a0agmdvgpoc0llfc4ctn6vh314rtdlg7"
+        }
+      ]
     ]
   }
 }
