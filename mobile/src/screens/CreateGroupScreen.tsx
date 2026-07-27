@@ -3,7 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-nativ
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi } from "../services/groupsApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "CreateGroup">;
@@ -19,9 +19,9 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   return (
     <Pressable onPress={onPress}>
       {active ? (
-        <GradientView style={styles.freqChip} borderRadius={radius.pill}>
+        <SolidButtonView style={styles.freqChip} borderRadius={radius.pill}>
           <Text style={styles.freqChipTextActive}>{label}</Text>
-        </GradientView>
+        </SolidButtonView>
       ) : (
         <View style={[styles.freqChip, styles.freqChipInactive]}>
           <Text style={styles.freqChipText}>{label}</Text>
@@ -71,9 +71,9 @@ export function CreateGroupScreen({ navigation }: Props) {
       </View>
 
       <Pressable onPress={handleSubmit} disabled={submitting}>
-        <GradientView style={styles.button} borderRadius={radius.md}>
+        <SolidButtonView style={styles.button} borderRadius={radius.md}>
           <Text style={styles.buttonText}>{submitting ? "만드는 중..." : "그룹 만들기"}</Text>
-        </GradientView>
+        </SolidButtonView>
       </Pressable>
     </View>
   );

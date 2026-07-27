@@ -11,7 +11,7 @@ const Stack = createNativeStackNavigator<GroupsStackParamList>();
 export function GroupsStackNavigator() {
   return (
     <Stack.Navigator initialRouteName="GroupsList">
-      <Stack.Screen name="GroupsList" component={GroupsListScreen} options={{ title: "그룹" }} />
+      <Stack.Screen name="GroupsList" component={GroupsListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: "새 그룹" }} />
       <Stack.Screen name="GroupDetail" component={GroupDetailScreen} options={{ title: "그룹 상세" }} />
       <Stack.Screen name="AddGroupMembers" component={AddGroupMembersScreen} options={{ title: "구성원 추가" }} />

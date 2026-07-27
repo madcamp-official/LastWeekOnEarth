@@ -19,7 +19,7 @@ import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/
 import { useAuthStore } from "../store/useAuthStore";
 import { GoogleLogo } from "../components/GoogleLogo";
 import { notify } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -208,9 +208,9 @@ export default function LoginScreen() {
         <Text style={styles.emailHint}>처음 로그인하는 이메일이면 자동으로 계정이 만들어져요.</Text>
 
         <TouchableOpacity style={styles.fullWidth} onPress={handleEmailLogin} disabled={loading} activeOpacity={0.8}>
-          <GradientView style={styles.emailButton} borderRadius={radius.lg}>
+          <SolidButtonView style={styles.emailButton} borderRadius={radius.lg}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
-          </GradientView>
+          </SolidButtonView>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

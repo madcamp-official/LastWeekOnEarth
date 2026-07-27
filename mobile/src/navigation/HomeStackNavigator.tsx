@@ -10,7 +10,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function HomeStackNavigator() {
   return (
     <Stack.Navigator initialRouteName="ContactsList">
-      <Stack.Screen name="ContactsList" component={ContactsListScreen} options={{ title: "주소록" }} />
+      <Stack.Screen name="ContactsList" component={ContactsListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ title: "인맥 상세" }} />
       <Stack.Screen name="AddContact" component={AddContactScreen} options={{ title: "인맥 추가" }} />
     </Stack.Navigator>

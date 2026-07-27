@@ -164,4 +164,31 @@ describe("contacts routes", () => {
       .send({ token: tokenRes.body.token });
     expect(res.status).toBe(400);
   });
+
+  it("shows a linked user's latest profile photo in the owner's contacts", async () => {
+    const contact = await prisma.contact.create({
+      data: {
+        ownerUserId: ownerId,
+        targetUserId: targetId,
+        name: "프로필 사진 대상",
+        source: "BLE",
+      },
+    });
+    const avatarUrl = "data:image/png;base64,dGVzdA==";
+
+    const profileRes = await request(app)
+      .patch("/api/users/me")
+      .set("Authorization", `Bearer ${targetToken}`)
+      .send({ avatarUrl });
+    expect(profileRes.status).toBe(200);
+
+    const listRes = await request(app).get("/api/contacts").set("Authorization", `Bearer ${ownerToken}`);
+    const listed = listRes.body.find((item: { id: string }) => item.id === contact.id);
+    expect(listed.photoUrl).toBe(avatarUrl);
+
+    const detailRes = await request(app)
+      .get(`/api/contacts/${contact.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(detailRes.body.photoUrl).toBe(avatarUrl);
+  });
 });

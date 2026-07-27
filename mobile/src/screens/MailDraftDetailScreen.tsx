@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
 import { confirmAction } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailDraftDetail">;
@@ -119,9 +119,9 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
               <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
             </View>
           ) : (
-            <GradientView style={styles.button} borderRadius={radius.md}>
+            <SolidButtonView style={styles.button} borderRadius={radius.md}>
               <Text style={styles.buttonText}>저장</Text>
-            </GradientView>
+            </SolidButtonView>
           )}
         </Pressable>
       </View>

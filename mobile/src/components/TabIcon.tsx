@@ -19,8 +19,27 @@ export function TabIcon({ name, active }: TabIconProps) {
     case "contacts":
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Circle cx="12" cy="8" r="3.4" stroke={stroke} strokeWidth={1.7} />
-          <Path d="M5 20c0-3.6 3.1-6.4 7-6.4s7 2.8 7 6.4" stroke={stroke} strokeWidth={1.7} strokeLinecap="round" />
+          <Path
+            d="M3 10l4.3-4.3c.6-.6 1.6-.6 2.2 0l1.7 1.7"
+            stroke={stroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M21 10l-4.3-4.3c-.6-.6-1.6-.6-2.2 0l-1.7 1.7"
+            stroke={stroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <Path
+            d="M4.3 13.2c1.2-1.3 2.3-1.3 3.5 0 1.2 1.3 2.3 1.3 3.5 0 1.2-1.3 2.3-1.3 3.5 0 1.2 1.3 2.3 1.3 3.5 0"
+            stroke={stroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </Svg>
       );
     case "ble":

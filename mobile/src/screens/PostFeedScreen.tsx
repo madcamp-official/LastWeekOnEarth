@@ -6,7 +6,7 @@ import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi, type Post } from "../services/postsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import { confirmAction } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "PostFeed">;
@@ -64,18 +64,18 @@ export function PostFeedScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>소식</Text>
         <Pressable onPress={() => navigation.navigate("CreatePost")}>
-          <GradientView style={styles.addButton} borderRadius={radius.sm}>
+          <SolidButtonView style={styles.addButton} borderRadius={radius.sm}>
             <Text style={styles.addButtonText}>+ 소식 올리기</Text>
-          </GradientView>
+          </SolidButtonView>
         </Pressable>
       </View>
 
       <View style={styles.tabRow}>
         <Pressable style={styles.tabButton} onPress={() => selectTab("MINE")}>
           {activeTab === "MINE" ? (
-            <GradientView style={styles.tab} borderRadius={radius.md}>
+            <SolidButtonView style={styles.tab} borderRadius={radius.md}>
               <Text style={styles.tabTextActive}>내 소식</Text>
-            </GradientView>
+            </SolidButtonView>
           ) : (
             <View style={[styles.tab, styles.tabInactive]}>
               <Text style={styles.tabText}>내 소식</Text>
@@ -84,9 +84,9 @@ export function PostFeedScreen({ navigation, route }: Props) {
         </Pressable>
         <Pressable style={styles.tabButton} onPress={() => selectTab("NEIGHBORS")}>
           {activeTab === "NEIGHBORS" ? (
-            <GradientView style={styles.tab} borderRadius={radius.md}>
+            <SolidButtonView style={styles.tab} borderRadius={radius.md}>
               <Text style={styles.tabTextActive}>이웃 소식</Text>
-            </GradientView>
+            </SolidButtonView>
           ) : (
             <View style={[styles.tab, styles.tabInactive]}>
               <Text style={styles.tabText}>이웃 소식</Text>

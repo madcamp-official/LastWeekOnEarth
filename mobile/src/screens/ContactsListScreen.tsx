@@ -6,7 +6,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactsList">;
@@ -113,9 +113,9 @@ export function ContactsListScreen({ navigation }: Props) {
             <Text style={styles.iconButtonGlyph}>👥</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate("AddContact")}>
-            <GradientView style={styles.iconButton} borderRadius={radius.md}>
+            <SolidButtonView style={styles.iconButton} borderRadius={radius.md}>
               <Text style={styles.iconButtonGlyphLight}>+</Text>
-            </GradientView>
+            </SolidButtonView>
           </Pressable>
         </View>
       </View>
@@ -144,9 +144,9 @@ export function ContactsListScreen({ navigation }: Props) {
           return (
             <Pressable onPress={() => setGroupFilter(item.id)}>
               {active ? (
-                <GradientView style={styles.chip} borderRadius={radius.sm}>
+                <SolidButtonView style={styles.chip} borderRadius={radius.sm}>
                   <Text style={styles.chipTextActive}>{item.name}</Text>
-                </GradientView>
+                </SolidButtonView>
               ) : (
                 <View style={[styles.chip, styles.chipInactive]}>
                   <Text style={styles.chipText}>{item.name}</Text>

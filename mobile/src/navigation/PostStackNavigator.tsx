@@ -9,7 +9,7 @@ const Stack = createNativeStackNavigator<PostStackParamList>();
 export function PostStackNavigator() {
   return (
     <Stack.Navigator initialRouteName="PostFeed">
-      <Stack.Screen name="PostFeed" component={PostFeedScreen} options={{ title: "소식" }} />
+      <Stack.Screen name="PostFeed" component={PostFeedScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CreatePost" component={CreatePostScreen} options={{ title: "소식 올리기" }} />
     </Stack.Navigator>
   );

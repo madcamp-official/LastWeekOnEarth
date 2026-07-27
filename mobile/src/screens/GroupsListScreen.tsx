@@ -5,7 +5,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
+import { BackButton } from "../components/BackButton";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupsList">;
@@ -45,11 +46,14 @@ export function GroupsListScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>그룹</Text>
+        <View style={styles.headerLeft}>
+          <BackButton onPress={() => (navigation.getParent() as any)?.navigate("Home")} />
+          <Text style={styles.title}>그룹</Text>
+        </View>
         <Pressable onPress={() => navigation.navigate("CreateGroup")}>
-          <GradientView style={styles.addButton} borderRadius={radius.sm}>
+          <SolidButtonView style={styles.addButton} borderRadius={radius.sm}>
             <Text style={styles.addButtonText}>+ 새 그룹</Text>
-          </GradientView>
+          </SolidButtonView>
         </Pressable>
       </View>
 
@@ -83,7 +87,14 @@ export function GroupsListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: spacing.lg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: spacing.lg,
+    paddingTop: 58,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   addButton: { paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: "#fff", fontWeight: "600" },

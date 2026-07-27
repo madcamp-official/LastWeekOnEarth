@@ -19,6 +19,7 @@ import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { EmailListEditor } from "../components/EmailListEditor";
 import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
@@ -182,9 +183,9 @@ export function MyPageScreen() {
                 <Text style={styles.cancelButtonText}>취소</Text>
               </Pressable>
               <Pressable style={styles.formButtonFlex} onPress={handleSave} disabled={saving}>
-                <GradientView style={styles.formButton} borderRadius={radius.md}>
+                <SolidButtonView style={styles.formButton} borderRadius={radius.md}>
                   <Text style={styles.saveButtonText}>{saving ? "저장 중..." : "저장"}</Text>
-                </GradientView>
+                </SolidButtonView>
               </Pressable>
             </View>
           </View>
@@ -195,9 +196,9 @@ export function MyPageScreen() {
             <Text style={styles.meta}>{user?.phone ?? "전화번호 미등록"}</Text>
 
             <Pressable onPress={handleStartEdit}>
-              <GradientView style={styles.editButton} borderRadius={radius.sm}>
+              <SolidButtonView style={styles.editButton} borderRadius={radius.sm}>
                 <Text style={styles.editButtonText}>정보 수정</Text>
-              </GradientView>
+              </SolidButtonView>
             </Pressable>
 
             <Pressable style={styles.logoutButton} onPress={handleLogout}>

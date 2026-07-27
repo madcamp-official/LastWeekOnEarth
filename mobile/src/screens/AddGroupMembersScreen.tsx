@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi } from "../services/groupsApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "AddGroupMembers">;
@@ -153,9 +153,9 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
               )}
             </View>
           ) : (
-            <GradientView style={styles.saveButton} borderRadius={radius.md}>
+            <SolidButtonView style={styles.saveButton} borderRadius={radius.md}>
               <Text style={styles.saveButtonText}>{`저장 (${selectedIds.size}명)`}</Text>
-            </GradientView>
+            </SolidButtonView>
           )}
         </Pressable>
       </View>

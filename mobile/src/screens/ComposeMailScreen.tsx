@@ -7,7 +7,7 @@ import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "ComposeMail">;
@@ -40,9 +40,9 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   return (
     <Pressable onPress={onPress}>
       {active ? (
-        <GradientView style={styles.chip} borderRadius={radius.pill}>
+        <SolidButtonView style={styles.chip} borderRadius={radius.pill}>
           <Text style={styles.chipTextActive}>{label}</Text>
-        </GradientView>
+        </SolidButtonView>
       ) : (
         <View style={[styles.chip, styles.chipInactive]}>
           <Text style={styles.chipText}>{label}</Text>
@@ -397,13 +397,13 @@ export function ComposeMailScreen({ navigation }: Props) {
             </View>
 
             <Pressable onPress={handleGenerate} disabled={generating}>
-              <GradientView style={styles.generateButton} borderRadius={radius.md}>
+              <SolidButtonView style={styles.generateButton} borderRadius={radius.md}>
                 {generating ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.generateButtonText}>AI로 초안 생성</Text>
                 )}
-              </GradientView>
+              </SolidButtonView>
             </Pressable>
           </View>
         }

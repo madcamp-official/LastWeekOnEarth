@@ -6,6 +6,7 @@ import { usersApi } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { notify } from "../utils/confirm";
 import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
@@ -74,9 +75,9 @@ export default function ProfileSetupScreen() {
         <PhoneNumberInput value={phone} onChangeValue={setPhone} editable={!saving} />
 
         <TouchableOpacity onPress={handleSubmit} disabled={saving} activeOpacity={0.8}>
-          <GradientView style={styles.button} borderRadius={radius.lg}>
+          <SolidButtonView style={styles.button} borderRadius={radius.lg}>
             <Text style={styles.buttonText}>{saving ? "저장 중..." : "시작하기"}</Text>
-          </GradientView>
+          </SolidButtonView>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

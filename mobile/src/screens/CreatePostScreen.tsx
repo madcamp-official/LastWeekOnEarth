@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi } from "../services/postsApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "CreatePost">;
@@ -78,9 +78,9 @@ export function CreatePostScreen({ navigation }: Props) {
       )}
 
       <Pressable onPress={handleSubmit} disabled={submitting}>
-        <GradientView style={styles.submitButton} borderRadius={radius.md}>
+        <SolidButtonView style={styles.submitButton} borderRadius={radius.md}>
           <Text style={styles.submitButtonText}>{submitting ? "게시 중..." : "소식 올리기"}</Text>
-        </GradientView>
+        </SolidButtonView>
       </Pressable>
     </View>
   );

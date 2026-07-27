@@ -5,7 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroupDetail } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupDetail">;
@@ -27,9 +27,9 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
   return (
     <Pressable onPress={onPress}>
       {active ? (
-        <GradientView style={styles.freqChip} borderRadius={radius.pill}>
+        <SolidButtonView style={styles.freqChip} borderRadius={radius.pill}>
           <Text style={styles.freqChipTextActive}>{label}</Text>
-        </GradientView>
+        </SolidButtonView>
       ) : (
         <View style={[styles.freqChip, styles.freqChipInactive]}>
           <Text style={styles.freqChipText}>{label}</Text>
@@ -113,9 +113,9 @@ export function GroupDetailScreen({ route, navigation }: Props) {
             <Text style={styles.cancelButtonText}>취소</Text>
           </Pressable>
           <Pressable style={styles.actionButtonFlex} onPress={handleSave} disabled={saving}>
-            <GradientView style={styles.button} borderRadius={radius.md}>
+            <SolidButtonView style={styles.button} borderRadius={radius.md}>
               <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
-            </GradientView>
+            </SolidButtonView>
           </Pressable>
         </View>
       </View>
@@ -129,14 +129,14 @@ export function GroupDetailScreen({ route, navigation }: Props) {
 
       <View style={styles.actions}>
         <Pressable style={styles.actionButtonFlex} onPress={() => navigation.navigate("AddGroupMembers", { groupId })}>
-          <GradientView style={styles.button} borderRadius={radius.md}>
+          <SolidButtonView style={styles.button} borderRadius={radius.md}>
             <Text style={styles.buttonText}>+ 구성원 수정</Text>
-          </GradientView>
+          </SolidButtonView>
         </Pressable>
         <Pressable style={styles.actionButtonFlex} onPress={handleStartEdit}>
-          <GradientView style={styles.button} borderRadius={radius.md}>
+          <SolidButtonView style={styles.button} borderRadius={radius.md}>
             <Text style={styles.buttonText}>정보 수정</Text>
-          </GradientView>
+          </SolidButtonView>
         </Pressable>
         <Pressable style={[styles.actionButton, styles.danger]} onPress={handleDelete}>
           <Text style={styles.buttonText}>그룹 삭제</Text>

@@ -13,6 +13,23 @@ const router = Router();
 
 router.use(requireAuth);
 
+const LINKED_PROFILE_INCLUDE = {
+  targetUser: { select: { avatarUrl: true } },
+} as const;
+
+type ContactWithLinkedProfile = Prisma.ContactGetPayload<{
+  include: typeof LINKED_PROFILE_INCLUDE;
+}>;
+
+function toContactResponse(contact: ContactWithLinkedProfile) {
+  const { targetUser, ...data } = contact;
+  return {
+    ...data,
+    // 연결된 계정의 최신 프로필 사진을 우선 사용한다. 개인적으로 지정한 사진은 연결 계정이 없을 때 유지한다.
+    photoUrl: targetUser?.avatarUrl ?? data.photoUrl,
+  };
+}
+
 const contactCreateSchema = z.object({
   name: z.string().min(1),
   affiliation: z.string().nullable().optional(),
@@ -32,7 +49,10 @@ const logCreateSchema = z.object({
 });
 
 async function findOwnedContactOrThrow(id: string, ownerUserId: string) {
-  const contact = await prisma.contact.findFirst({ where: { id, ownerUserId } });
+  const contact = await prisma.contact.findFirst({
+    where: { id, ownerUserId },
+    include: LINKED_PROFILE_INCLUDE,
+  });
   if (!contact) {
     throw new HttpError(404, "인맥을 찾을 수 없습니다.");
   }
@@ -58,8 +78,9 @@ router.get(
     const contacts = await prisma.contact.findMany({
       where: { ownerUserId: req.user!.userId },
       orderBy: { createdAt: "desc" },
+      include: LINKED_PROFILE_INCLUDE,
     });
-    res.json(contacts);
+    res.json(contacts.map(toContactResponse));
   }),
 );
 
@@ -145,7 +166,7 @@ router.get(
   "/:id",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
-    res.json(contact);
+    res.json(toContactResponse(contact));
   }),
 );
 

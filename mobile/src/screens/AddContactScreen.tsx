@@ -4,7 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddContact">;
@@ -20,9 +20,9 @@ function OptionChip({ label, active, onPress }: { label: string; active: boolean
   return (
     <Pressable onPress={onPress}>
       {active ? (
-        <GradientView style={styles.optionChip} borderRadius={radius.pill}>
+        <SolidButtonView style={styles.optionChip} borderRadius={radius.pill}>
           <Text style={styles.optionTextActive}>{label}</Text>
-        </GradientView>
+        </SolidButtonView>
       ) : (
         <View style={[styles.optionChip, styles.optionChipInactive]}>
           <Text style={styles.optionText}>{label}</Text>
@@ -147,9 +147,9 @@ export function AddContactScreen({ navigation }: Props) {
       />
 
       <Pressable onPress={handleSubmit} disabled={submitting}>
-        <GradientView style={styles.button} borderRadius={radius.md}>
+        <SolidButtonView style={styles.button} borderRadius={radius.md}>
           <Text style={styles.buttonText}>{submitting ? "등록 중..." : "등록"}</Text>
-        </GradientView>
+        </SolidButtonView>
       </Pressable>
     </ScrollView>
   );

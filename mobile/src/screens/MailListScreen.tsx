@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
-import { GradientView } from "../components/GradientView";
+import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailList">;
@@ -73,9 +73,9 @@ export function MailListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>메일함</Text>
         <Pressable onPress={() => navigation.navigate("ComposeMail")}>
-          <GradientView style={styles.addButton} borderRadius={radius.md}>
+          <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
             <Text style={styles.addButtonText}>+</Text>
-          </GradientView>
+          </SolidButtonView>
         </Pressable>
       </View>
 
@@ -101,9 +101,9 @@ export function MailListScreen({ navigation }: Props) {
           return (
             <Pressable onPress={() => setStatusFilter(item.key)}>
               {active ? (
-                <GradientView style={styles.chip} borderRadius={radius.sm}>
+                <SolidButtonView style={styles.chip} borderRadius={radius.sm}>
                   <Text style={styles.chipTextActive}>{item.label}</Text>
-                </GradientView>
+                </SolidButtonView>
               ) : (
                 <View style={[styles.chip, styles.chipInactive]}>
                   <Text style={styles.chipText}>{item.label}</Text>
