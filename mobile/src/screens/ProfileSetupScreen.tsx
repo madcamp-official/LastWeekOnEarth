@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
 import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi } from "../services/usersApi";
@@ -51,7 +51,7 @@ export default function ProfileSetupScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>프로필을 완성해주세요</Text>
         <Text style={styles.subtitle}>{user?.email} 계정으로 가입 중이에요</Text>
 
@@ -68,7 +68,7 @@ export default function ProfileSetupScreen() {
         <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={saving} activeOpacity={0.8}>
           <Text style={styles.buttonText}>{saving ? "저장 중..." : "시작하기"}</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
