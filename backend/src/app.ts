@@ -6,7 +6,8 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware";
 export const app = express();
 
 app.use(cors());
-app.use(express.json());
+// 사진 첨부 소식은 base64 data URL을 본문에 담으므로 Express 기본 100KB 제한보다 크게 받는다.
+app.use(express.json({ limit: "6mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

@@ -1,4 +1,4 @@
 export type PostStackParamList = {
-  PostFeed: undefined;
+  PostFeed: { initialTab?: "MINE" | "NEIGHBORS"; refreshKey?: number } | undefined;
   CreatePost: undefined;
 };

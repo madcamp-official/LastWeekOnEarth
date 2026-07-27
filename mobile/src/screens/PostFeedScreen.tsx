@@ -24,11 +24,12 @@ function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function PostFeedScreen({ navigation }: Props) {
+export function PostFeedScreen({ navigation, route }: Props) {
   const myUserId = useAuthStore((s) => s.user?.id);
   const [tab, setTab] = useState<Tab>("MINE");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const activeTab = route.params?.initialTab ?? tab;
 
   const load = useCallback(async (target: Tab) => {
     setLoading(true);
@@ -41,15 +42,20 @@ export function PostFeedScreen({ navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      load(tab);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tab]),
+      setTab(activeTab);
+      load(activeTab);
+    }, [activeTab, load, route.params?.refreshKey]),
   );
+
+  const selectTab = (nextTab: Tab) => {
+    navigation.setParams({ initialTab: undefined, refreshKey: undefined });
+    setTab(nextTab);
+  };
 
   const handleDelete = (post: Post) => {
     confirmAction("이 소식을 삭제하시겠습니까?", async () => {
       await postsApi.remove(post.id);
-      load(tab);
+      load(activeTab);
     });
   };
 
@@ -65,8 +71,8 @@ export function PostFeedScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.tabRow}>
-        <Pressable onPress={() => setTab("MINE")}>
-          {tab === "MINE" ? (
+        <Pressable style={styles.tabButton} onPress={() => selectTab("MINE")}>
+          {activeTab === "MINE" ? (
             <GradientView style={styles.tab} borderRadius={radius.md}>
               <Text style={styles.tabTextActive}>내 소식</Text>
             </GradientView>
@@ -76,8 +82,8 @@ export function PostFeedScreen({ navigation }: Props) {
             </View>
           )}
         </Pressable>
-        <Pressable onPress={() => setTab("NEIGHBORS")}>
-          {tab === "NEIGHBORS" ? (
+        <Pressable style={styles.tabButton} onPress={() => selectTab("NEIGHBORS")}>
+          {activeTab === "NEIGHBORS" ? (
             <GradientView style={styles.tab} borderRadius={radius.md}>
               <Text style={styles.tabTextActive}>이웃 소식</Text>
             </GradientView>
@@ -93,11 +99,11 @@ export function PostFeedScreen({ navigation }: Props) {
         data={posts}
         keyExtractor={(item) => item.id}
         refreshing={loading}
-        onRefresh={() => load(tab)}
+        onRefresh={() => load(activeTab)}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            {tab === "MINE"
+            {activeTab === "MINE"
               ? "아직 올린 소식이 없습니다."
               : "이웃 소식이 없습니다. BLE로 태깅했거나 이메일이 일치하는 인맥이 계정을 가지고 있어야 보여요."}
           </Text>
@@ -148,8 +154,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
   addButton: { paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: "#fff", fontWeight: "600" },
-  tabRow: { flexDirection: "row", paddingHorizontal: spacing.xl, gap: spacing.sm, marginBottom: spacing.sm },
-  tab: { flex: 1, paddingVertical: 10, alignItems: "center" },
+  tabRow: { flexDirection: "row", paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
+  tabButton: { flex: 1 },
+  tab: { width: "100%", height: 48, alignItems: "center", justifyContent: "center" },
   tabInactive: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md },
   tabText: { fontWeight: "600", color: colors.sub },
   tabTextActive: { color: "#fff", fontWeight: "600" },

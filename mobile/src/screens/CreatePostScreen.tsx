@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
@@ -39,9 +40,13 @@ export function CreatePostScreen({ navigation }: Props) {
     setSubmitting(true);
     try {
       await postsApi.create({ content: content.trim(), photoUrl: photoUrl ?? undefined });
-      navigation.goBack();
-    } catch {
-      Alert.alert("게시 실패", "소식을 올리지 못했습니다.");
+      navigation.navigate("PostFeed", { initialTab: "MINE", refreshKey: Date.now() });
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error
+          ? err.response.data.error
+          : "소식을 올리지 못했습니다.";
+      Alert.alert("게시 실패", message);
     } finally {
       setSubmitting(false);
     }
