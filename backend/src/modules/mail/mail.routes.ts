@@ -167,7 +167,11 @@ router.patch(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     await findOwnedDraftOrThrow(req.params.id, req.user!.userId);
     const body = updateSchema.parse(req.body);
-    const updated = await prisma.emailDraft.update({ where: { id: req.params.id }, data: body });
+    const updated = await prisma.emailDraft.update({
+      where: { id: req.params.id },
+      data: body,
+      include: { contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } } },
+    });
     res.json(updated);
   }),
 );
