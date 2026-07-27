@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import LoginScreen from "./src/screens/LoginScreen";
 import ProfileSetupScreen from "./src/screens/ProfileSetupScreen";
 import { useAuthStore } from "./src/store/useAuthStore";
@@ -16,14 +17,20 @@ function AppContent() {
 
 export default function App() {
   if (Platform.OS !== "web") {
-    return <AppContent />;
+    return (
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    );
   }
 
   // 웹 프리뷰에서만 실제 폰 화면처럼 보이도록 고정 크기 프레임으로 감싼다.
   return (
     <View style={styles.webBackdrop}>
       <View style={styles.phoneFrame}>
-        <AppContent />
+        <SafeAreaProvider>
+          <AppContent />
+        </SafeAreaProvider>
       </View>
     </View>
   );

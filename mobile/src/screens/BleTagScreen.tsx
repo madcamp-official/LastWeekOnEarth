@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { ensureBlePermissions, scanForNearbyCodes, startAdvertising, stopAdvertising } from "../services/bleService";
@@ -13,6 +13,12 @@ interface FoundDevice {
   rssi: number;
   status: "found" | "tagging" | "tagged" | "error";
   contact?: Contact;
+  // 태깅 전에는 서버 미리보기(ble-preview)로 채워지고, 태깅 후에는 contact.name으로 대체된다.
+  name?: string;
+  affiliation?: string | null;
+  // 미리보기가 응답하기 전에는 아직 모른다 — 같은 사람이 스캔 재시작으로 새 코드를 다시 발급받아
+  // 광고하면 code는 바뀌지만 userId는 그대로라, 이 값으로 목록에서 중복을 걸러낸다.
+  userId?: string;
 }
 
 const AVATAR_COLORS = [colors.violet, colors.blue, colors.pink];
@@ -22,36 +28,36 @@ const avatarColorFor = (code: string) => AVATAR_COLORS[code.charCodeAt(0) % AVAT
 // 태깅 완료 후 Home 탭의 ContactDetail로 넘어가려면 부모(탭) 네비게이터를 통해 중첩 이동해야 한다.
 export function BleTagScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
-  const [advertising, setAdvertising] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const stopScanRef = useRef<(() => void) | null>(null);
   const taggedCodesRef = useRef(new Set<string>());
+  // 같은 코드에 대해 미리보기 요청을 중복으로 보내지 않기 위한 표시.
+  const previewedCodesRef = useRef(new Set<string>());
+  // 언마운트(또는 재시작 도중 다시 취소) 이후 비동기 응답이 와서 상태를 건드리는 걸 막는다.
+  const activeRef = useRef(true);
 
-  useEffect(() => {
-    return () => {
-      stopScanRef.current?.();
-      stopAdvertising();
-    };
-  }, []);
-
-  const handleStart = async () => {
+  // 광고(내 프로필 알리기)와 스캔(상대 찾기)을 동시에 시작한다. 화면 진입 시 자동으로 한 번
+  // 실행되고, "스캔 취소" 이후 가운데 로고를 다시 눌러서 재시작할 때도 이 함수를 그대로 쓴다.
+  const startScanning = useCallback(async () => {
+    activeRef.current = true;
     if (!(await ensureBlePermissions())) {
       notify("블루투스 권한이 필요합니다.", "설정에서 블루투스 권한을 허용해주세요.");
       return;
     }
+    if (!activeRef.current) return;
 
-    try {
-      const { token } = await contactsApi.issueBleToken();
-      await startAdvertising(token);
-      setAdvertising(true);
-    } catch {
-      notify("광고를 시작하지 못했습니다.", "잠시 후 다시 시도해주세요.");
-      return;
-    }
+    // 광고 완료를 기다리지 않고 바로 스캔을 시작한다 — iOS는 블루투스 상태가 막 켜지는 시점
+    // (특히 앱을 처음 열어 권한 팝업에 아직 응답 전)이면 광고 시작 자체가 몇 초 지연될 수 있는데,
+    // 그걸 기다리느라 "찾는 중" 표시(=스캔 시작)까지 늦어지면 체감 속도가 느려진다.
+    contactsApi
+      .issueBleToken()
+      .then(({ token }) => (activeRef.current ? startAdvertising(token) : undefined))
+      .catch((err) => console.warn("[BleTagScreen] advertising failed:", err));
 
-    setDevices([]);
     taggedCodesRef.current.clear();
+    previewedCodesRef.current.clear();
+    setDevices([]);
     stopScanRef.current = scanForNearbyCodes((code, rssi) => {
       setDevices((prev) => {
         const existing = prev.find((d) => d.code === code);
@@ -60,16 +66,54 @@ export function BleTagScreen() {
         }
         return [...prev, { code, rssi, status: "found" }];
       });
+
+      // 처음 보는 코드면 이름/소속을 미리 조회한다 — 목록에 "기기 xxxx" 대신 실제 이름이 보이도록.
+      if (previewedCodesRef.current.has(code)) return;
+      previewedCodesRef.current.add(code);
+      contactsApi
+        .previewBleCode(code)
+        .then(({ userId, name, affiliation }) => {
+          setDevices((prev) => {
+            // 같은 사람(userId)이 이미 다른 코드로 목록에 있으면 하나로 합친다 — 스캔을 재시작하면
+            // 광고 쪽도 새 코드를 다시 발급받아서, 같은 사람이 두 코드로 두 번 잡히는 문제가 있었다.
+            const duplicate = prev.find((d) => d.userId === userId && d.code !== code);
+            const withoutDuplicate = duplicate ? prev.filter((d) => d.code !== duplicate.code) : prev;
+            return withoutDuplicate.map((d) => {
+              if (d.code !== code) return d;
+              // 예전 코드가 이미 등록 완료 상태였다면 새로 합쳐진 항목도 그 상태를 유지한다.
+              if (duplicate?.status === "tagged") {
+                return { ...d, userId, name, affiliation, status: "tagged", contact: duplicate.contact };
+              }
+              return { ...d, userId, name, affiliation };
+            });
+          });
+        })
+        .catch(() => {
+          // 만료됐거나 등록되지 않은 코드일 수 있다 — 이름 없이 코드만 보여주는 것으로 충분하다.
+          previewedCodesRef.current.delete(code);
+        });
     });
     setScanning(true);
-  };
+  }, []);
+
+  // 화면을 열면 자동으로 시작한다 — 두 기기 모두 이 화면을 열어두기만 하면 서로 알아서 찾아내야
+  // 해서, 수동으로 눌러야 하는 시작 버튼은 오히려 인식을 늦추는 걸림돌이었다.
+  useEffect(() => {
+    startScanning().catch(() => undefined);
+    return () => {
+      activeRef.current = false;
+      stopScanRef.current?.();
+      stopAdvertising();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleReset = () => {
+    activeRef.current = false;
     stopScanRef.current?.();
     stopScanRef.current = null;
     stopAdvertising();
     setScanning(false);
-    setAdvertising(false);
     setDevices([]);
   };
 
@@ -101,14 +145,12 @@ export function BleTagScreen() {
       <View style={styles.stage}>
         {!scanning && (
           <View style={styles.idle}>
-            <View style={styles.idleOuter}>
-              <Image source={require("../../assets/Anchora_main.png")} style={styles.idleLogo} resizeMode="cover" />
-            </View>
-            <Text style={styles.idleHint}>
-              {Platform.OS === "ios"
-                ? "iOS는 스캔만 가능해요. 상대가 Android라면 자동으로 인식돼요"
-                : "주변 사람을 찾을 준비가 됐어요\n둘 다 앱을 켜고 있으면 자동으로 인식해요"}
-            </Text>
+            <Pressable onPress={() => startScanning()}>
+              <View style={styles.idleOuter}>
+                <Image source={require("../../assets/Anchora_main.png")} style={styles.idleLogo} resizeMode="cover" />
+              </View>
+            </Pressable>
+            <Text style={styles.idleHint}>로고를 눌러서 다시 찾기를 시작하세요</Text>
           </View>
         )}
 
@@ -128,16 +170,18 @@ export function BleTagScreen() {
             renderItem={({ item }) => (
               <View style={styles.deviceRow}>
                 <View style={[styles.avatar, { backgroundColor: avatarColorFor(item.code) }]}>
-                  <Text style={styles.avatarText}>{item.contact ? item.contact.name[0] : "?"}</Text>
+                  <Text style={styles.avatarText}>{(item.contact?.name ?? item.name)?.[0] ?? "?"}</Text>
                 </View>
                 <View style={styles.deviceInfo}>
-                  <Text style={styles.deviceName}>{item.contact ? item.contact.name : `기기 ${item.code}`}</Text>
-                  <Text style={styles.deviceMeta}>RSSI {item.rssi}dBm</Text>
+                  <Text style={styles.deviceName}>{item.contact?.name ?? item.name ?? `기기 ${item.code}`}</Text>
+                  <Text style={styles.deviceMeta}>
+                    {item.affiliation ? `${item.affiliation} · ` : ""}RSSI {item.rssi}dBm
+                  </Text>
                 </View>
                 {item.status === "found" && (
                   <Pressable onPress={() => handleTag(item.code)}>
                     <GradientView style={styles.tagButton} borderRadius={radius.md}>
-                      <Text style={styles.tagButtonText}>태깅</Text>
+                      <Text style={styles.tagButtonText}>등록</Text>
                     </GradientView>
                   </Pressable>
                 )}
@@ -154,20 +198,13 @@ export function BleTagScreen() {
         )}
       </View>
 
-      <View style={styles.actions}>
-        {!scanning && (
-          <Pressable onPress={handleStart}>
-            <GradientView style={styles.primaryButton} borderRadius={radius.lg}>
-              <Text style={styles.primaryButtonText}>주변 사람 찾기 시작</Text>
-            </GradientView>
-          </Pressable>
-        )}
-        {scanning && (
+      {scanning && (
+        <View style={styles.actions}>
           <Pressable style={styles.secondaryButton} onPress={handleReset}>
             <Text style={styles.secondaryButtonText}>스캔 취소</Text>
           </Pressable>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -213,8 +250,6 @@ const styles = StyleSheet.create({
   done: { color: colors.success, fontWeight: "700" },
   error: { color: colors.danger },
   actions: { paddingHorizontal: spacing.xxl, paddingBottom: 28, paddingTop: spacing.sm },
-  primaryButton: { height: 54, alignItems: "center", justifyContent: "center" },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   secondaryButton: {
     height: 44,
     borderRadius: radius.lg,

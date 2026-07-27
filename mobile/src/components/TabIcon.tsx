@@ -1,5 +1,4 @@
 import React from "react";
-import { Image } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { colors } from "../theme/colors";
 
@@ -17,16 +16,28 @@ export function TabIcon({ name, active }: TabIconProps) {
   const size = 22;
 
   switch (name) {
-    case "contacts": {
-      const handshakeColor = active ? "#7547E8" : "#8D8994";
+    // 원래 handshake.png(PNG + tintColor)를 썼는데, Android에서 tintColor가 PNG 알파채널을
+    // iOS와 다르게 처리해서 아이콘이 거의 안 보이는 문제가 있었다 — 다른 탭과 같은 방식(사람 두 명을
+    // 나타내는 SVG selection stroke)으로 바꿔서 두 플랫폼에서 동일하게 렌더링되도록 한다.
+    case "contacts":
       return (
-        <Image
-          source={require("../../assets/handshake.png")}
-          style={{ width: size, height: size, tintColor: handshakeColor }}
-          resizeMode="contain"
-        />
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Circle cx="9" cy="8" r="2.8" stroke={stroke} strokeWidth={1.7} />
+          <Path
+            d="M3.5 19.5c0-3.5 2.4-6 5.5-6s5.5 2.5 5.5 6"
+            stroke={stroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+          />
+          <Circle cx="17" cy="9" r="2.2" stroke={stroke} strokeWidth={1.7} />
+          <Path
+            d="M14.5 19.5c0-2.7 1.7-4.6 4-4.6s3.8 1.6 4 4"
+            stroke={stroke}
+            strokeWidth={1.7}
+            strokeLinecap="round"
+          />
+        </Svg>
       );
-    }
     case "ble":
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
