@@ -4,6 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddContact">;
 
@@ -13,6 +15,22 @@ const CONTACT_METHOD_OPTIONS: { label: string; value: ContactMethod }[] = [
   { label: "전화", value: "CALL" },
   { label: "기타", value: "OTHER" },
 ];
+
+function OptionChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      {active ? (
+        <GradientView style={styles.optionChip} borderRadius={radius.pill}>
+          <Text style={styles.optionTextActive}>{label}</Text>
+        </GradientView>
+      ) : (
+        <View style={[styles.optionChip, styles.optionChipInactive]}>
+          <Text style={styles.optionText}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 export function AddContactScreen({ navigation }: Props) {
   const [name, setName] = useState("");
@@ -77,11 +95,24 @@ export function AddContactScreen({ navigation }: Props) {
         )}
       </Pressable>
 
-      <TextInput style={styles.input} placeholder="이름 *" value={name} onChangeText={setName} />
-      <TextInput style={styles.input} placeholder="소속" value={affiliation} onChangeText={setAffiliation} />
+      <TextInput
+        style={styles.input}
+        placeholder="이름 *"
+        placeholderTextColor={colors.faint}
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="소속"
+        placeholderTextColor={colors.faint}
+        value={affiliation}
+        onChangeText={setAffiliation}
+      />
       <TextInput
         style={styles.input}
         placeholder="이메일"
+        placeholderTextColor={colors.faint}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -90,6 +121,7 @@ export function AddContactScreen({ navigation }: Props) {
       <TextInput
         style={styles.input}
         placeholder="전화번호"
+        placeholderTextColor={colors.faint}
         value={phone}
         onChangeText={setPhone}
         keyboardType="phone-pad"
@@ -97,39 +129,39 @@ export function AddContactScreen({ navigation }: Props) {
       <Text style={styles.label}>연락 방법</Text>
       <View style={styles.optionRow}>
         {CONTACT_METHOD_OPTIONS.map((option) => (
-          <Pressable
+          <OptionChip
             key={option.value}
-            style={[styles.optionChip, contactMethod === option.value && styles.optionChipActive]}
+            label={option.label}
+            active={contactMethod === option.value}
             onPress={() => setContactMethod(option.value)}
-          >
-            <Text style={[styles.optionText, contactMethod === option.value && styles.optionTextActive]}>
-              {option.label}
-            </Text>
-          </Pressable>
+          />
         ))}
       </View>
       <TextInput
         style={[styles.input, styles.memo]}
         placeholder="메모"
+        placeholderTextColor={colors.faint}
         value={memo}
         onChangeText={setMemo}
         multiline
       />
 
-      <Pressable style={styles.button} onPress={handleSubmit} disabled={submitting}>
-        <Text style={styles.buttonText}>{submitting ? "등록 중..." : "등록"}</Text>
+      <Pressable onPress={handleSubmit} disabled={submitting}>
+        <GradientView style={styles.button} borderRadius={radius.md}>
+          <Text style={styles.buttonText}>{submitting ? "등록 중..." : "등록"}</Text>
+        </GradientView>
       </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 16, gap: 12 },
+  container: { flexGrow: 1, padding: spacing.lg, paddingTop: 24, gap: spacing.md, backgroundColor: colors.bg },
   photoPicker: {
     width: 88,
     height: 88,
-    borderRadius: 12,
-    backgroundColor: "#F2F2F2",
+    borderRadius: radius.md,
+    backgroundColor: colors.violetSoft,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -137,21 +169,22 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   photo: { width: 88, height: 88 },
-  photoPlaceholder: { textAlign: "center", color: "#999", fontWeight: "600" },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
-  label: { fontWeight: "600" },
-  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  optionChip: {
+  photoPlaceholder: { textAlign: "center", color: colors.violet, fontWeight: "600" },
+  input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
-  optionChipActive: { backgroundColor: "#111", borderColor: "#111" },
-  optionText: { color: "#111", fontWeight: "600" },
-  optionTextActive: { color: "#fff" },
+  label: { fontWeight: "600", color: colors.ink },
+  optionRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  optionChip: { borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 8 },
+  optionChipInactive: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  optionText: { color: colors.sub, fontWeight: "600" },
+  optionTextActive: { color: "#fff", fontWeight: "600" },
   memo: { height: 80, textAlignVertical: "top" },
-  button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center" },
-  buttonText: { color: "#fff", fontWeight: "600" },
+  button: { padding: 14, alignItems: "center" },
+  buttonText: { color: "#fff", fontWeight: "700" },
 });

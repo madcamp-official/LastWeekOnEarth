@@ -6,6 +6,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
 import { confirmAction } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailDraftDetail">;
 
@@ -111,12 +113,16 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
         <Pressable style={[styles.button, styles.danger]} onPress={handleDelete}>
           <Text style={styles.buttonText}>삭제</Text>
         </Pressable>
-        <Pressable
-          style={[styles.button, (saving || !isDirty) && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={saving || !isDirty}
-        >
-          <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
+        <Pressable style={styles.buttonFlex} onPress={handleSave} disabled={saving || !isDirty}>
+          {saving || !isDirty ? (
+            <View style={[styles.button, styles.buttonDisabled]}>
+              <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
+            </View>
+          ) : (
+            <GradientView style={styles.button} borderRadius={radius.md}>
+              <Text style={styles.buttonText}>저장</Text>
+            </GradientView>
+          )}
         </Pressable>
       </View>
     </ScrollView>
@@ -124,13 +130,13 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  contactName: { fontSize: 20, fontWeight: "700" },
-  meta: { color: "#888", marginTop: 4 },
-  channelBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  channelBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 12 },
-  label: { fontWeight: "700" },
+  contactName: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  meta: { color: colors.sub, marginTop: 4 },
+  channelBadge: { backgroundColor: colors.blueSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  channelBadgeText: { color: colors.blue, fontWeight: "600", fontSize: 12 },
+  label: { fontWeight: "700", color: colors.ink },
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -138,12 +144,20 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 6,
   },
-  copyLink: { color: "#4285F4", fontWeight: "600", fontSize: 13 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
+  copyLink: { color: colors.violet, fontWeight: "600", fontSize: 13 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    color: colors.ink,
+    backgroundColor: colors.card,
+  },
   bodyInput: { minHeight: 200 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 24, marginBottom: 32 },
-  button: { flex: 1, backgroundColor: "#111", borderRadius: 8, padding: 12, alignItems: "center" },
-  buttonDisabled: { backgroundColor: "#ccc" },
-  danger: { backgroundColor: "#b00020" },
+  actions: { flexDirection: "row", gap: spacing.sm, marginTop: 24, marginBottom: 32 },
+  button: { borderRadius: radius.md, padding: 12, alignItems: "center" },
+  buttonFlex: { flex: 1 },
+  buttonDisabled: { backgroundColor: colors.faint },
+  danger: { flex: 1, backgroundColor: colors.danger },
   buttonText: { color: "#fff", fontWeight: "600" },
 });

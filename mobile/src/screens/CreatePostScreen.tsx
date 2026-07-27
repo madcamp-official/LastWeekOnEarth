@@ -4,6 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi } from "../services/postsApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "CreatePost">;
 
@@ -50,6 +52,7 @@ export function CreatePostScreen({ navigation }: Props) {
       <TextInput
         style={styles.contentInput}
         placeholder="무슨 소식이 있나요?"
+        placeholderTextColor={colors.faint}
         value={content}
         onChangeText={setContent}
         multiline
@@ -69,35 +72,39 @@ export function CreatePostScreen({ navigation }: Props) {
         </Pressable>
       )}
 
-      <Pressable style={styles.submitButton} onPress={handleSubmit} disabled={submitting}>
-        <Text style={styles.submitButtonText}>{submitting ? "게시 중..." : "소식 올리기"}</Text>
+      <Pressable onPress={handleSubmit} disabled={submitting}>
+        <GradientView style={styles.submitButton} borderRadius={radius.md}>
+          <Text style={styles.submitButtonText}>{submitting ? "게시 중..." : "소식 올리기"}</Text>
+        </GradientView>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
+  container: { flex: 1, padding: spacing.lg, gap: spacing.md, backgroundColor: colors.bg },
   contentInput: {
     minHeight: 140,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
     padding: 12,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
   photoPicker: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.line,
     borderStyle: "dashed",
-    borderRadius: 8,
+    borderRadius: radius.md,
     padding: 20,
     alignItems: "center",
   },
-  photoPickerText: { color: "#888", fontWeight: "600" },
-  photoPreviewWrap: { gap: 8 },
-  photoPreview: { width: "100%", aspectRatio: 1.4, borderRadius: 8 },
+  photoPickerText: { color: colors.sub, fontWeight: "600" },
+  photoPreviewWrap: { gap: spacing.sm },
+  photoPreview: { width: "100%", aspectRatio: 1.4, borderRadius: radius.md },
   removePhotoButton: { alignSelf: "flex-start" },
-  removePhotoText: { color: "#B00020", fontSize: 13, fontWeight: "600" },
-  submitButton: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
+  removePhotoText: { color: colors.danger, fontSize: 13, fontWeight: "600" },
+  submitButton: { padding: 14, alignItems: "center", marginTop: 8 },
   submitButtonText: { color: "#fff", fontWeight: "700" },
 });

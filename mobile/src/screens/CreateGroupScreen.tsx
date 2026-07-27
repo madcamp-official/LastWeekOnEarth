@@ -3,6 +3,8 @@ import { Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-nativ
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi } from "../services/groupsApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "CreateGroup">;
 
@@ -12,6 +14,22 @@ const FREQUENCY_OPTIONS = [
   { label: "6개월", days: 180 },
   { label: "1년", days: 365 },
 ];
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      {active ? (
+        <GradientView style={styles.freqChip} borderRadius={radius.pill}>
+          <Text style={styles.freqChipTextActive}>{label}</Text>
+        </GradientView>
+      ) : (
+        <View style={[styles.freqChip, styles.freqChipInactive]}>
+          <Text style={styles.freqChipText}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 export function CreateGroupScreen({ navigation }: Props) {
   const [name, setName] = useState("");
@@ -37,45 +55,46 @@ export function CreateGroupScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>그룹 이름</Text>
-      <TextInput style={styles.input} placeholder="예: 대학 동기" value={name} onChangeText={setName} />
+      <TextInput
+        style={styles.input}
+        placeholder="예: 대학 동기"
+        placeholderTextColor={colors.faint}
+        value={name}
+        onChangeText={setName}
+      />
 
       <Text style={styles.label}>연락 빈도</Text>
       <View style={styles.freqRow}>
         {FREQUENCY_OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.days}
-            style={[styles.freqChip, frequencyDays === opt.days && styles.freqChipActive]}
-            onPress={() => setFrequencyDays(opt.days)}
-          >
-            <Text style={[styles.freqChipText, frequencyDays === opt.days && styles.freqChipTextActive]}>
-              {opt.label}
-            </Text>
-          </Pressable>
+          <Chip key={opt.days} label={opt.label} active={frequencyDays === opt.days} onPress={() => setFrequencyDays(opt.days)} />
         ))}
       </View>
 
-      <Pressable style={styles.button} onPress={handleSubmit} disabled={submitting}>
-        <Text style={styles.buttonText}>{submitting ? "만드는 중..." : "그룹 만들기"}</Text>
+      <Pressable onPress={handleSubmit} disabled={submitting}>
+        <GradientView style={styles.button} borderRadius={radius.md}>
+          <Text style={styles.buttonText}>{submitting ? "만드는 중..." : "그룹 만들기"}</Text>
+        </GradientView>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 12 },
-  label: { fontWeight: "600", marginTop: 8 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
-  freqRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  freqChip: {
+  container: { flex: 1, padding: spacing.lg, gap: spacing.md, backgroundColor: colors.bg },
+  label: { fontWeight: "600", marginTop: 8, color: colors.ink },
+  input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
-  freqChipActive: { backgroundColor: "#111", borderColor: "#111" },
-  freqChipText: { color: "#111", fontWeight: "600" },
-  freqChipTextActive: { color: "#fff" },
-  button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 24 },
-  buttonText: { color: "#fff", fontWeight: "600" },
+  freqRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  freqChip: { borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 8 },
+  freqChipInactive: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  freqChipText: { color: colors.sub, fontWeight: "600" },
+  freqChipTextActive: { color: "#fff", fontWeight: "600" },
+  button: { padding: 14, alignItems: "center", marginTop: 24 },
+  buttonText: { color: "#fff", fontWeight: "700" },
 });

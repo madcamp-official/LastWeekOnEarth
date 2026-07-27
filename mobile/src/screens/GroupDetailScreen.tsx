@@ -5,6 +5,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroupDetail } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupDetail">;
 
@@ -20,6 +22,22 @@ const FREQUENCY_OPTIONS = [
   { label: "6개월", days: 180 },
   { label: "1년", days: 365 },
 ];
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      {active ? (
+        <GradientView style={styles.freqChip} borderRadius={radius.pill}>
+          <Text style={styles.freqChipTextActive}>{label}</Text>
+        </GradientView>
+      ) : (
+        <View style={[styles.freqChip, styles.freqChipInactive]}>
+          <Text style={styles.freqChipText}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 export function GroupDetailScreen({ route, navigation }: Props) {
   const { groupId } = route.params;
@@ -81,24 +99,23 @@ export function GroupDetailScreen({ route, navigation }: Props) {
         <Text style={styles.label}>연락 빈도</Text>
         <View style={styles.freqRow}>
           {FREQUENCY_OPTIONS.map((opt) => (
-            <Pressable
+            <Chip
               key={opt.days}
-              style={[styles.freqChip, frequencyDays === opt.days && styles.freqChipActive]}
+              label={opt.label}
+              active={frequencyDays === opt.days}
               onPress={() => setFrequencyDays(opt.days)}
-            >
-              <Text style={[styles.freqChipText, frequencyDays === opt.days && styles.freqChipTextActive]}>
-                {opt.label}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
 
         <View style={styles.actions}>
-          <Pressable style={[styles.button, styles.actionButton, styles.cancelButton]} onPress={() => setEditing(false)} disabled={saving}>
+          <Pressable style={[styles.actionButton, styles.cancelButton]} onPress={() => setEditing(false)} disabled={saving}>
             <Text style={styles.cancelButtonText}>취소</Text>
           </Pressable>
-          <Pressable style={[styles.button, styles.actionButton]} onPress={handleSave} disabled={saving}>
-            <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
+          <Pressable style={styles.actionButtonFlex} onPress={handleSave} disabled={saving}>
+            <GradientView style={styles.button} borderRadius={radius.md}>
+              <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
+            </GradientView>
           </Pressable>
         </View>
       </View>
@@ -111,16 +128,17 @@ export function GroupDetailScreen({ route, navigation }: Props) {
       <Text style={styles.freq}>{formatFrequency(group.frequencyDays)}마다 연락</Text>
 
       <View style={styles.actions}>
-        <Pressable
-          style={[styles.button, styles.actionButton]}
-          onPress={() => navigation.navigate("AddGroupMembers", { groupId })}
-        >
-          <Text style={styles.buttonText}>+ 구성원 수정</Text>
+        <Pressable style={styles.actionButtonFlex} onPress={() => navigation.navigate("AddGroupMembers", { groupId })}>
+          <GradientView style={styles.button} borderRadius={radius.md}>
+            <Text style={styles.buttonText}>+ 구성원 수정</Text>
+          </GradientView>
         </Pressable>
-        <Pressable style={[styles.button, styles.actionButton]} onPress={handleStartEdit}>
-          <Text style={styles.buttonText}>정보 수정</Text>
+        <Pressable style={styles.actionButtonFlex} onPress={handleStartEdit}>
+          <GradientView style={styles.button} borderRadius={radius.md}>
+            <Text style={styles.buttonText}>정보 수정</Text>
+          </GradientView>
         </Pressable>
-        <Pressable style={[styles.button, styles.actionButton, styles.danger]} onPress={handleDelete}>
+        <Pressable style={[styles.actionButton, styles.danger]} onPress={handleDelete}>
           <Text style={styles.buttonText}>그룹 삭제</Text>
         </Pressable>
       </View>
@@ -142,32 +160,34 @@ export function GroupDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  name: { fontSize: 22, fontWeight: "700" },
-  freq: { color: "#4285F4", fontWeight: "600", marginTop: 4 },
-  actions: { flexDirection: "row", gap: 8, marginTop: 16 },
-  button: { backgroundColor: "#111", borderRadius: 8, padding: 12, alignItems: "center" },
-  actionButton: { flex: 1 },
-  cancelButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#DADCE0" },
-  cancelButtonText: { fontWeight: "600", color: "#111" },
-  danger: { backgroundColor: "#b00020" },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
+  name: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  freq: { color: colors.violet, fontWeight: "600", marginTop: 4 },
+  actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.lg },
+  button: { borderRadius: radius.md, padding: 12, alignItems: "center" },
+  actionButton: { flex: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
+  actionButtonFlex: { flex: 1 },
+  cancelButton: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
+  cancelButtonText: { fontWeight: "600", color: colors.ink },
+  danger: { backgroundColor: colors.danger },
   buttonText: { color: "#fff", fontWeight: "600" },
-  sectionTitle: { fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8 },
-  row: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  rowName: { fontWeight: "600" },
-  rowMeta: { color: "#888", marginTop: 2 },
-  empty: { color: "#999" },
-  label: { fontWeight: "600", marginTop: 8, marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 },
-  freqRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  freqChip: {
+  sectionTitle: { fontSize: 16, fontWeight: "700", marginTop: 24, marginBottom: 8, color: colors.ink },
+  row: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.line },
+  rowName: { fontWeight: "600", color: colors.ink },
+  rowMeta: { color: colors.sub, marginTop: 2 },
+  empty: { color: colors.faint },
+  label: { fontWeight: "600", marginTop: 8, marginBottom: 8, color: colors.ink },
+  input: {
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
-  freqChipActive: { backgroundColor: "#111", borderColor: "#111" },
-  freqChipText: { color: "#111", fontWeight: "600" },
-  freqChipTextActive: { color: "#fff" },
+  freqRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  freqChip: { borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 8 },
+  freqChipInactive: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  freqChipText: { color: colors.sub, fontWeight: "600" },
+  freqChipTextActive: { color: "#fff", fontWeight: "600" },
 });

@@ -6,6 +6,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi } from "../services/groupsApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "AddGroupMembers">;
 
@@ -141,15 +143,19 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
       />
 
       <View style={styles.footer}>
-        <Pressable
-          style={[styles.saveButton, (!isDirty || saving) && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={!isDirty || saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
+        <Pressable onPress={handleSave} disabled={!isDirty || saving}>
+          {!isDirty || saving ? (
+            <View style={[styles.saveButton, styles.saveButtonDisabled]}>
+              {saving ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>저장</Text>
+              )}
+            </View>
           ) : (
-            <Text style={styles.saveButtonText}>{isDirty ? `저장 (${selectedIds.size}명)` : "저장"}</Text>
+            <GradientView style={styles.saveButton} borderRadius={radius.md}>
+              <Text style={styles.saveButtonText}>{`저장 (${selectedIds.size}명)`}</Text>
+            </GradientView>
           )}
         </Pressable>
       </View>
@@ -158,60 +164,61 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  hint: { color: "#888", padding: 16, paddingBottom: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  hint: { color: colors.sub, padding: spacing.lg, paddingBottom: spacing.sm },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 12,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
     paddingHorizontal: 12,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F2F2F2",
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   searchIcon: { marginRight: 8, fontSize: 14 },
-  searchInput: { flex: 1, height: "100%" },
+  searchInput: { flex: 1, height: "100%", color: colors.ink },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 16, gap: 8, paddingBottom: 16 },
+  listContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.lg },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 14,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#eee",
-    backgroundColor: "#fff",
+    borderColor: colors.line,
+    backgroundColor: colors.card,
   },
-  rowActive: { borderColor: "#111", backgroundColor: "#F7F7F7" },
-  name: { fontWeight: "600", fontSize: 15 },
-  meta: { color: "#888", marginTop: 2, fontSize: 12 },
+  rowActive: { borderColor: colors.violet, backgroundColor: colors.violetSoft },
+  name: { fontWeight: "600", fontSize: 15, color: colors.ink },
+  meta: { color: colors.sub, marginTop: 2, fontSize: 12 },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: "#ccc",
+    borderColor: colors.line,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxActive: { backgroundColor: "#111", borderColor: "#111" },
+  checkboxActive: { backgroundColor: colors.violet, borderColor: colors.violet },
   checkboxMark: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  empty: { textAlign: "center", marginTop: 40, color: "#999" },
+  empty: { textAlign: "center", marginTop: 40, color: colors.faint },
   footer: {
-    padding: 16,
+    padding: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: "#eee",
-    backgroundColor: "#fff",
+    borderTopColor: colors.line,
+    backgroundColor: colors.card,
   },
   saveButton: {
     height: 48,
-    borderRadius: 8,
-    backgroundColor: "#111",
+    borderRadius: radius.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  saveButtonDisabled: { backgroundColor: "#ccc" },
+  saveButtonDisabled: { backgroundColor: colors.faint },
   saveButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

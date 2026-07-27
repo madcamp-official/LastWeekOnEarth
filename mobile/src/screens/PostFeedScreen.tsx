@@ -6,6 +6,8 @@ import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi, type Post } from "../services/postsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import { confirmAction } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "PostFeed">;
 type Tab = "MINE" | "NEIGHBORS";
@@ -55,20 +57,35 @@ export function PostFeedScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>소식</Text>
-        <Pressable style={styles.addButton} onPress={() => navigation.navigate("CreatePost")}>
-          <Text style={styles.addButtonText}>+ 소식 올리기</Text>
+        <Pressable onPress={() => navigation.navigate("CreatePost")}>
+          <GradientView style={styles.addButton} borderRadius={radius.sm}>
+            <Text style={styles.addButtonText}>+ 소식 올리기</Text>
+          </GradientView>
         </Pressable>
       </View>
 
       <View style={styles.tabRow}>
-        <Pressable style={[styles.tab, tab === "MINE" && styles.tabActive]} onPress={() => setTab("MINE")}>
-          <Text style={[styles.tabText, tab === "MINE" && styles.tabTextActive]}>내 소식</Text>
+        <Pressable onPress={() => setTab("MINE")}>
+          {tab === "MINE" ? (
+            <GradientView style={styles.tab} borderRadius={radius.md}>
+              <Text style={styles.tabTextActive}>내 소식</Text>
+            </GradientView>
+          ) : (
+            <View style={[styles.tab, styles.tabInactive]}>
+              <Text style={styles.tabText}>내 소식</Text>
+            </View>
+          )}
         </Pressable>
-        <Pressable
-          style={[styles.tab, tab === "NEIGHBORS" && styles.tabActive]}
-          onPress={() => setTab("NEIGHBORS")}
-        >
-          <Text style={[styles.tabText, tab === "NEIGHBORS" && styles.tabTextActive]}>이웃 소식</Text>
+        <Pressable onPress={() => setTab("NEIGHBORS")}>
+          {tab === "NEIGHBORS" ? (
+            <GradientView style={styles.tab} borderRadius={radius.md}>
+              <Text style={styles.tabTextActive}>이웃 소식</Text>
+            </GradientView>
+          ) : (
+            <View style={[styles.tab, styles.tabInactive]}>
+              <Text style={styles.tabText}>이웃 소식</Text>
+            </View>
+          )}
         </Pressable>
       </View>
 
@@ -119,24 +136,31 @@ export function PostFeedScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
-  title: { fontSize: 22, fontWeight: "700" },
-  addButton: { backgroundColor: "#111", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 58,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  title: { fontSize: 26, fontWeight: "800", color: colors.ink },
+  addButton: { paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: "#fff", fontWeight: "600" },
-  tabRow: { flexDirection: "row", paddingHorizontal: 16, gap: 8, marginBottom: 8 },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: "center", backgroundColor: "#F2F2F2" },
-  tabActive: { backgroundColor: "#111" },
-  tabText: { fontWeight: "600", color: "#666" },
-  tabTextActive: { color: "#fff" },
-  list: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
-  card: { backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: "#eee", padding: 12 },
+  tabRow: { flexDirection: "row", paddingHorizontal: spacing.xl, gap: spacing.sm, marginBottom: spacing.sm },
+  tab: { flex: 1, paddingVertical: 10, alignItems: "center" },
+  tabInactive: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md },
+  tabText: { fontWeight: "600", color: colors.sub },
+  tabTextActive: { color: "#fff", fontWeight: "600" },
+  list: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.md },
+  card: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, padding: spacing.md },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   authorAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#111",
+    backgroundColor: colors.violet,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -144,10 +168,10 @@ const styles = StyleSheet.create({
   authorAvatarImage: { width: 36, height: 36 },
   authorAvatarText: { color: "#fff", fontWeight: "700" },
   authorInfo: { flex: 1 },
-  authorName: { fontWeight: "700", fontSize: 14 },
-  authorMeta: { color: "#888", fontSize: 12, marginTop: 1 },
-  deleteText: { color: "#B00020", fontSize: 12, fontWeight: "600" },
-  content: { marginTop: 10, fontSize: 14, lineHeight: 20 },
-  postPhoto: { width: "100%", aspectRatio: 1.4, borderRadius: 8, marginTop: 10 },
-  empty: { textAlign: "center", marginTop: 40, color: "#999", paddingHorizontal: 24 },
+  authorName: { fontWeight: "700", fontSize: 14, color: colors.ink },
+  authorMeta: { color: colors.sub, fontSize: 12, marginTop: 1 },
+  deleteText: { color: colors.danger, fontSize: 12, fontWeight: "600" },
+  content: { marginTop: 10, fontSize: 14, lineHeight: 20, color: colors.ink },
+  postPhoto: { width: "100%", aspectRatio: 1.4, borderRadius: radius.sm, marginTop: 10 },
+  empty: { textAlign: "center", marginTop: 40, color: colors.faint, paddingHorizontal: 24 },
 });

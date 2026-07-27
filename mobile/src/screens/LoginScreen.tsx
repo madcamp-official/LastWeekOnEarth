@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +18,9 @@ import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/
 import { useAuthStore } from "../store/useAuthStore";
 import { GoogleLogo } from "../components/GoogleLogo";
 import { notify } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
+import Svg, { Circle, Path } from "react-native-svg";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -153,9 +157,23 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Anchora</Text>
-        <Text style={styles.subtitle}>구글 계정으로 로그인하세요</Text>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.logoWrap}>
+          <GradientView style={styles.logoMark} borderRadius={24}>
+            <Svg width={38} height={38} viewBox="0 0 24 24" fill="none">
+              <Circle cx="12" cy="5" r="2.4" stroke="#fff" strokeWidth={1.8} />
+              <Path
+                d="M12 7.5V14M12 14C7.5 14 6 11.5 6 9M12 14C16.5 14 18 11.5 18 9"
+                stroke="#fff"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+              />
+              <Path d="M4 9H8M16 9H20" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
+            </Svg>
+          </GradientView>
+          <Text style={styles.title}>Anchora</Text>
+          <Text style={styles.subtitle}>스쳐 가는 만남을,{"\n"}오래가는 인맥으로 남겨요</Text>
+        </View>
 
         <TouchableOpacity
           style={styles.googleButton}
@@ -200,61 +218,67 @@ export default function LoginScreen() {
         />
         <Text style={styles.emailHint}>처음 로그인하는 이메일이면 자동으로 계정이 만들어져요.</Text>
 
-        <TouchableOpacity
-          style={styles.emailButton}
-          onPress={handleEmailLogin}
-          disabled={loading}
-          activeOpacity={0.8}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
+        <TouchableOpacity style={styles.fullWidth} onPress={handleEmailLogin} disabled={loading} activeOpacity={0.8}>
+          <GradientView style={styles.emailButton} borderRadius={radius.lg}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
+          </GradientView>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  content: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 24 },
-  title: { fontSize: 24, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 14, color: "#6B7280", marginBottom: 40 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: spacing.xxl, paddingVertical: 40 },
+  logoWrap: { alignItems: "center", marginBottom: 36 },
+  logoMark: {
+    width: 84,
+    height: 84,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  title: { fontSize: 30, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },
+  subtitle: { fontSize: 15, color: colors.sub, marginTop: 8, textAlign: "center", lineHeight: 22 },
   googleButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
     height: 52,
-    borderRadius: 8,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#DADCE0",
-    backgroundColor: "#FFFFFF",
+    borderColor: colors.line,
+    backgroundColor: colors.card,
   },
   googleIcon: {
     width: 20,
     height: 20,
     marginRight: 12,
   },
-  googleButtonText: { fontSize: 16, fontWeight: "600", color: "#1F1F1F" },
+  googleButtonText: { fontSize: 16, fontWeight: "600", color: colors.ink },
   divider: { flexDirection: "row", alignItems: "center", width: "100%", marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "#E5E7EB" },
-  dividerText: { marginHorizontal: 12, color: "#9CA3AF", fontSize: 12 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.line },
+  dividerText: { marginHorizontal: 12, color: colors.faint, fontSize: 12 },
   input: {
     width: "100%",
     height: 48,
     borderWidth: 1,
-    borderColor: "#DADCE0",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     marginBottom: 10,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
-  emailHint: { color: "#9CA3AF", fontSize: 12, marginBottom: 14, alignSelf: "flex-start" },
+  emailHint: { color: colors.faint, fontSize: 12, marginBottom: 14, alignSelf: "flex-start" },
+  fullWidth: { width: "100%" },
   emailButton: {
     width: "100%",
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#111",
+    height: 52,
     alignItems: "center",
     justifyContent: "center",
   },
-  emailButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  emailButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

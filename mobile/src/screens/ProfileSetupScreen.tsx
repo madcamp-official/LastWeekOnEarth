@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { notify } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
 
@@ -53,6 +55,11 @@ export default function ProfileSetupScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <View style={styles.avatarWrap}>
+          <GradientView style={styles.avatar} borderRadius={44}>
+            <Text style={styles.avatarInitial}>{(name || user?.email || "?")[0]?.toUpperCase()}</Text>
+          </GradientView>
+        </View>
         <Text style={styles.title}>프로필을 완성해주세요</Text>
         <Text style={styles.subtitle}>{user?.email} 계정으로 가입 중이에요</Text>
 
@@ -66,8 +73,10 @@ export default function ProfileSetupScreen() {
         />
         <PhoneNumberInput value={phone} onChangeValue={setPhone} editable={!saving} />
 
-        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={saving} activeOpacity={0.8}>
-          <Text style={styles.buttonText}>{saving ? "저장 중..." : "시작하기"}</Text>
+        <TouchableOpacity onPress={handleSubmit} disabled={saving} activeOpacity={0.8}>
+          <GradientView style={styles.button} borderRadius={radius.lg}>
+            <Text style={styles.buttonText}>{saving ? "저장 중..." : "시작하기"}</Text>
+          </GradientView>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -75,25 +84,28 @@ export default function ProfileSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { flex: 1, justifyContent: "center", paddingHorizontal: 24 },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
-  subtitle: { fontSize: 13, color: "#6B7280", marginBottom: 28 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, justifyContent: "center", paddingHorizontal: spacing.xxl, paddingVertical: 40 },
+  avatarWrap: { alignItems: "center", marginBottom: spacing.lg },
+  avatar: { width: 88, height: 88, alignItems: "center", justifyContent: "center" },
+  avatarInitial: { fontSize: 30, fontWeight: "700", color: "#fff" },
+  title: { fontSize: 24, fontWeight: "800", color: colors.ink, textAlign: "center" },
+  subtitle: { fontSize: 14, color: colors.sub, marginTop: 6, marginBottom: 28, textAlign: "center" },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: "#DADCE0",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     marginBottom: 10,
+    color: colors.ink,
+    backgroundColor: colors.card,
   },
   button: {
     marginTop: 12,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#111",
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

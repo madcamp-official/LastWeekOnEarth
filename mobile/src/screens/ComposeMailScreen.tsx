@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
@@ -7,12 +7,14 @@ import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "ComposeMail">;
 type RecipientMode = "CONTACT" | "GROUP";
 
 const OTHER = "기타";
-const OCCASIONS = ["경조사", "안부 인사", "명절 인사", "생일 축하", "감사 인사", "축하 인사", OTHER];
+const OCCASIONS = ["경사 (결혼)", "조사 (상)", "안부 인사", "명절 인사", "생일 축하", "감사 인사", "축하 인사", OTHER];
 const RECIPIENT_TYPES = ["교수님", "동기", "선배", "후배", "VC 심사역", "채용 담당자", OTHER];
 const CHANNELS: { label: string; value: MailChannel }[] = [
   { label: "이메일", value: "EMAIL" },
@@ -32,6 +34,22 @@ function isCelebrationOccasion(occasion: string | null): boolean {
 // 생일은 축하 사유가 이미 분명하므로 별도 상세 입력을 받지 않는다.
 function requiresCelebrationDetail(occasion: string | null): boolean {
   return isCelebrationOccasion(occasion) && !occasion?.includes("생일");
+}
+
+function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress}>
+      {active ? (
+        <GradientView style={styles.chip} borderRadius={radius.pill}>
+          <Text style={styles.chipTextActive}>{label}</Text>
+        </GradientView>
+      ) : (
+        <View style={[styles.chip, styles.chipInactive]}>
+          <Text style={styles.chipText}>{label}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
 }
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -199,20 +217,8 @@ export function ComposeMailScreen({ navigation }: Props) {
           <View style={styles.headerSection}>
             <Text style={styles.label}>받는 대상</Text>
             <View style={styles.chipRow}>
-              <Pressable
-                style={[styles.chip, recipientMode === "CONTACT" && styles.chipActive]}
-                onPress={() => setRecipientMode("CONTACT")}
-              >
-                <Text style={[styles.chipText, recipientMode === "CONTACT" && styles.chipTextActive]}>
-                  받는 사람
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.chip, recipientMode === "GROUP" && styles.chipActive]}
-                onPress={() => setRecipientMode("GROUP")}
-              >
-                <Text style={[styles.chipText, recipientMode === "GROUP" && styles.chipTextActive]}>그룹</Text>
-              </Pressable>
+              <Chip label="받는 사람" active={recipientMode === "CONTACT"} onPress={() => setRecipientMode("CONTACT")} />
+              <Chip label="그룹" active={recipientMode === "GROUP"} onPress={() => setRecipientMode("GROUP")} />
             </View>
 
             {recipientMode === "CONTACT" ? (
@@ -259,15 +265,12 @@ export function ComposeMailScreen({ navigation }: Props) {
                     <Text style={styles.label}>발송 방식</Text>
                     <View style={styles.chipRow}>
                       {GROUP_DRAFT_MODES.map((opt) => (
-                        <Pressable
+                        <Chip
                           key={opt.value}
-                          style={[styles.chip, groupDraftMode === opt.value && styles.chipActive]}
+                          label={opt.label}
+                          active={groupDraftMode === opt.value}
                           onPress={() => setGroupDraftMode(opt.value)}
-                        >
-                          <Text style={[styles.chipText, groupDraftMode === opt.value && styles.chipTextActive]}>
-                            {opt.label}
-                          </Text>
-                        </Pressable>
+                        />
                       ))}
                     </View>
                     <Text style={styles.hint}>
@@ -309,13 +312,7 @@ export function ComposeMailScreen({ navigation }: Props) {
             <Text style={styles.label}>연락 상황</Text>
             <View style={styles.chipRow}>
               {OCCASIONS.map((item) => (
-                <Pressable
-                  key={item}
-                  style={[styles.chip, occasion === item && styles.chipActive]}
-                  onPress={() => setOccasion(item)}
-                >
-                  <Text style={[styles.chipText, occasion === item && styles.chipTextActive]}>{item}</Text>
-                </Pressable>
+                <Chip key={item} label={item} active={occasion === item} onPress={() => setOccasion(item)} />
               ))}
             </View>
             {occasion === OTHER && (
@@ -350,7 +347,7 @@ export function ComposeMailScreen({ navigation }: Props) {
                     </Pressable>
                   </View>
                 ) : loadingGroupMembers ? (
-                  <ActivityIndicator color="#111" />
+                  <ActivityIndicator color={colors.violet} />
                 ) : (
                   <View style={styles.groupList}>
                     {groupMembers.length === 0 ? (
@@ -375,13 +372,7 @@ export function ComposeMailScreen({ navigation }: Props) {
             <Text style={styles.label}>받는 사람 유형</Text>
             <View style={styles.chipRow}>
               {RECIPIENT_TYPES.map((item) => (
-                <Pressable
-                  key={item}
-                  style={[styles.chip, recipientType === item && styles.chipActive]}
-                  onPress={() => setRecipientType(item)}
-                >
-                  <Text style={[styles.chipText, recipientType === item && styles.chipTextActive]}>{item}</Text>
-                </Pressable>
+                <Chip key={item} label={item} active={recipientType === item} onPress={() => setRecipientType(item)} />
               ))}
             </View>
             {recipientType === OTHER && (
@@ -396,24 +387,23 @@ export function ComposeMailScreen({ navigation }: Props) {
             <Text style={styles.label}>연락 방법</Text>
             <View style={styles.chipRow}>
               {CHANNELS.map((item) => (
-                <Pressable
+                <Chip
                   key={item.value}
-                  style={[styles.chip, channel === item.value && styles.chipActive]}
+                  label={item.label}
+                  active={channel === item.value}
                   onPress={() => setChannel(item.value)}
-                >
-                  <Text style={[styles.chipText, channel === item.value && styles.chipTextActive]}>
-                    {item.label}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
 
-            <Pressable style={styles.generateButton} onPress={handleGenerate} disabled={generating}>
-              {generating ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.generateButtonText}>AI로 초안 생성</Text>
-              )}
+            <Pressable onPress={handleGenerate} disabled={generating}>
+              <GradientView style={styles.generateButton} borderRadius={radius.md}>
+                {generating ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.generateButtonText}>AI로 초안 생성</Text>
+                )}
+              </GradientView>
             </Pressable>
           </View>
         }
@@ -423,62 +413,71 @@ export function ComposeMailScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerSection: { padding: 16, paddingBottom: 8, gap: 8 },
-  footerSection: { padding: 16, gap: 8 },
-  label: { fontWeight: "700", marginTop: 12, marginBottom: 4 },
-  hint: { color: "#888", fontSize: 12, marginTop: -4 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  headerSection: { padding: spacing.lg, paddingTop: 58, paddingBottom: spacing.sm, gap: spacing.sm },
+  footerSection: { padding: spacing.lg, gap: spacing.sm },
+  label: { fontWeight: "700", marginTop: 12, marginBottom: 4, color: colors.ink },
+  hint: { color: colors.sub, fontSize: 12, marginTop: -4 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: "#F2F2F2",
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   searchIcon: { marginRight: 8, fontSize: 14 },
-  searchInput: { flex: 1, height: "100%" },
+  searchInput: { flex: 1, height: "100%", color: colors.ink },
   selectedBox: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#F7F7F7",
+    borderRadius: radius.md,
+    backgroundColor: colors.violetSoft,
     borderWidth: 1,
-    borderColor: "#111",
+    borderColor: colors.violet,
   },
-  selectedBoxText: { fontWeight: "600" },
-  clearLink: { color: "#4285F4", fontWeight: "600", fontSize: 12 },
+  selectedBoxText: { fontWeight: "600", color: colors.ink },
+  clearLink: { color: colors.violet, fontWeight: "600", fontSize: 12 },
   groupList: { gap: 4 },
   groupRow: {
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#eee",
+    borderColor: colors.line,
+    backgroundColor: colors.card,
   },
-  groupRowActive: { borderColor: "#111", backgroundColor: "#F7F7F7" },
+  groupRowActive: { borderColor: colors.violet, backgroundColor: colors.violetSoft },
   contactRow: {
     marginHorizontal: 16,
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.line,
   },
-  contactName: { fontWeight: "600" },
-  contactMeta: { color: "#888", marginTop: 2, fontSize: 12 },
-  empty: { textAlign: "center", marginTop: 24, color: "#999" },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderWidth: 1, borderColor: "#ddd", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
-  chipActive: { backgroundColor: "#111", borderColor: "#111" },
-  chipText: { color: "#111", fontWeight: "600", fontSize: 13 },
-  chipTextActive: { color: "#fff" },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, marginTop: 8 },
+  contactName: { fontWeight: "600", color: colors.ink },
+  contactMeta: { color: colors.sub, marginTop: 2, fontSize: 12 },
+  empty: { textAlign: "center", marginTop: 24, color: colors.faint },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  chip: { borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 8 },
+  chipInactive: { borderWidth: 1, borderColor: colors.line, backgroundColor: colors.card },
+  chipText: { color: colors.sub, fontWeight: "600", fontSize: 13 },
+  chipTextActive: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    marginTop: 8,
+    color: colors.ink,
+    backgroundColor: colors.card,
+  },
   generateButton: {
     marginTop: 20,
-    backgroundColor: "#111",
-    borderRadius: 8,
     padding: 14,
     alignItems: "center",
   },

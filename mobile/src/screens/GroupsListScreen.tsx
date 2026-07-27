@@ -5,6 +5,8 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupsList">;
 
@@ -44,8 +46,10 @@ export function GroupsListScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>그룹</Text>
-        <Pressable style={styles.addButton} onPress={() => navigation.navigate("CreateGroup")}>
-          <Text style={styles.addButtonText}>+ 새 그룹</Text>
+        <Pressable onPress={() => navigation.navigate("CreateGroup")}>
+          <GradientView style={styles.addButton} borderRadius={radius.sm}>
+            <Text style={styles.addButtonText}>+ 새 그룹</Text>
+          </GradientView>
         </Pressable>
       </View>
 
@@ -78,27 +82,29 @@ export function GroupsListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
-  title: { fontSize: 22, fontWeight: "700" },
-  addButton: { backgroundColor: "#111", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: spacing.lg },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  addButton: { paddingHorizontal: 14, paddingVertical: 8 },
   addButtonText: { color: "#fff", fontWeight: "600" },
-  list: { paddingHorizontal: 16, gap: 8 },
+  list: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 14,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
   },
-  name: { fontSize: 16, fontWeight: "600" },
-  meta: { color: "#888", marginTop: 2 },
-  rowRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  freqBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  freqBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 12 },
+  name: { fontSize: 16, fontWeight: "700", color: colors.ink },
+  meta: { color: colors.sub, marginTop: 2 },
+  rowRight: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  freqBadge: { backgroundColor: colors.violetSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
+  freqBadgeText: { color: colors.violet, fontWeight: "600", fontSize: 12 },
   deleteButton: { padding: 6 },
   deleteButtonText: { fontSize: 16 },
-  empty: { textAlign: "center", marginTop: 40, color: "#999" },
+  empty: { textAlign: "center", marginTop: 40, color: colors.faint },
 });

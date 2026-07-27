@@ -4,6 +4,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailList">;
 
@@ -13,10 +15,24 @@ const STATUS_LABEL: Record<MailDraft["status"], string> = {
   SENT: "발송됨",
 };
 
+const STATUS_META: Record<MailDraft["status"], { bg: string; color: string }> = {
+  DRAFT: { bg: "#EDEAF3", color: colors.sub },
+  SCHEDULED: { bg: colors.violetSoft, color: colors.violet },
+  SENT: { bg: "#E4F5EA", color: colors.success },
+};
+
+const STATUS_FILTERS: { key: "all" | MailDraft["status"]; label: string }[] = [
+  { key: "all", label: "전체" },
+  { key: "DRAFT", label: "초안" },
+  { key: "SCHEDULED", label: "예약됨" },
+  { key: "SENT", label: "발송됨" },
+];
+
 export function MailListScreen({ navigation }: Props) {
   const [drafts, setDrafts] = useState<MailDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | MailDraft["status"]>("all");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -35,9 +51,11 @@ export function MailListScreen({ navigation }: Props) {
 
   const filteredDrafts = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return drafts;
+    let base = drafts;
+    if (statusFilter !== "all") base = base.filter((d) => d.status === statusFilter);
+    if (!normalizedQuery) return base;
 
-    return drafts.filter((draft) =>
+    return base.filter((draft) =>
       [
         draft.contact?.name,
         draft.contact?.affiliation,
@@ -48,14 +66,16 @@ export function MailListScreen({ navigation }: Props) {
         STATUS_LABEL[draft.status],
       ].some((value) => value?.toLocaleLowerCase().includes(normalizedQuery)),
     );
-  }, [drafts, query]);
+  }, [drafts, query, statusFilter]);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>메일</Text>
-        <Pressable style={styles.addButton} onPress={() => navigation.navigate("ComposeMail")}>
-          <Text style={styles.addButtonText}>+ 새 초안</Text>
+        <Text style={styles.title}>메일함</Text>
+        <Pressable onPress={() => navigation.navigate("ComposeMail")}>
+          <GradientView style={styles.addButton} borderRadius={radius.md}>
+            <Text style={styles.addButtonText}>+</Text>
+          </GradientView>
         </Pressable>
       </View>
 
@@ -64,8 +84,34 @@ export function MailListScreen({ navigation }: Props) {
         value={query}
         onChangeText={setQuery}
         placeholder="이름, 제목, 내용으로 초안 검색"
+        placeholderTextColor={colors.faint}
         returnKeyType="search"
         clearButtonMode="while-editing"
+      />
+
+      <FlatList
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.chipsRow}
+        contentContainerStyle={styles.chipsContent}
+        data={STATUS_FILTERS}
+        keyExtractor={(item) => item.key}
+        renderItem={({ item }) => {
+          const active = statusFilter === item.key;
+          return (
+            <Pressable onPress={() => setStatusFilter(item.key)}>
+              {active ? (
+                <GradientView style={styles.chip} borderRadius={radius.sm}>
+                  <Text style={styles.chipTextActive}>{item.label}</Text>
+                </GradientView>
+              ) : (
+                <View style={[styles.chip, styles.chipInactive]}>
+                  <Text style={styles.chipText}>{item.label}</Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        }}
       />
 
       <FlatList
@@ -81,63 +127,80 @@ export function MailListScreen({ navigation }: Props) {
               : "아직 작성한 초안이 없습니다. AI로 연락 초안을 만들어보세요."}
           </Text>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.row}
-            onPress={() => navigation.navigate("MailDraftDetail", { draftId: item.id })}
-          >
-            <View style={styles.rowInfo}>
-              <Text style={styles.rowName}>
-                {item.contact?.name ?? (item.group ? `${item.group.name} (그룹 공통)` : "삭제된 인맥")}
-              </Text>
+        renderItem={({ item }) => {
+          const meta = STATUS_META[item.status];
+          return (
+            <Pressable
+              style={styles.card}
+              onPress={() => navigation.navigate("MailDraftDetail", { draftId: item.id })}
+            >
+              <View style={styles.cardTopRow}>
+                <Text style={styles.rowName} numberOfLines={1}>
+                  {item.contact?.name ?? (item.group ? `${item.group.name} (그룹 공통)` : "삭제된 인맥")}
+                </Text>
+                <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
+                  <Text style={[styles.statusBadgeText, { color: meta.color }]}>{STATUS_LABEL[item.status]}</Text>
+                </View>
+              </View>
               <Text style={styles.rowSubject} numberOfLines={1}>
                 {item.channel === "EMAIL" ? item.subject || "(제목 없음)" : item.body}
               </Text>
-            </View>
-            <View style={styles.badges}>
               <View style={styles.channelBadge}>
                 <Text style={styles.channelBadgeText}>{item.channel === "EMAIL" ? "이메일" : "문자"}</Text>
               </View>
-              <Text style={styles.statusText}>{STATUS_LABEL[item.status]}</Text>
-            </View>
-          </Pressable>
-        )}
+            </Pressable>
+          );
+        }}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16 },
-  title: { fontSize: 22, fontWeight: "700" },
-  addButton: { backgroundColor: "#111", borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
-  addButtonText: { color: "#fff", fontWeight: "600" },
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 58,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  title: { fontSize: 26, fontWeight: "800", color: colors.ink },
+  addButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
+  addButtonText: { color: "#fff", fontWeight: "700", fontSize: 18 },
   searchInput: {
-    marginHorizontal: 16,
-    marginBottom: 8,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    backgroundColor: colors.card,
+    color: colors.ink,
   },
-  list: { paddingHorizontal: 16, gap: 8, paddingBottom: 16 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+  chipsRow: { flexGrow: 0, marginBottom: spacing.sm },
+  chipsContent: { paddingHorizontal: spacing.xl, gap: spacing.sm },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.sm },
+  chipInactive: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line },
+  chipText: { fontSize: 13, fontWeight: "600", color: colors.sub },
+  chipTextActive: { fontSize: 13, fontWeight: "600", color: "#fff" },
+  list: { paddingHorizontal: spacing.xl, gap: spacing.sm, paddingBottom: spacing.lg },
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.xs,
   },
-  rowInfo: { flex: 1, marginRight: 8 },
-  rowName: { fontSize: 16, fontWeight: "600" },
-  rowSubject: { color: "#888", marginTop: 2 },
-  badges: { alignItems: "flex-end", gap: 4 },
-  channelBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  channelBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 11 },
-  statusText: { color: "#999", fontSize: 11 },
-  empty: { textAlign: "center", marginTop: 40, color: "#999" },
+  cardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  rowName: { fontSize: 15, fontWeight: "700", color: colors.ink, flexShrink: 1 },
+  rowSubject: { color: colors.sub, fontSize: 13 },
+  statusBadge: { borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 },
+  statusBadgeText: { fontWeight: "700", fontSize: 10.5 },
+  channelBadge: { alignSelf: "flex-start", backgroundColor: colors.blueSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4 },
+  channelBadgeText: { color: colors.blue, fontWeight: "600", fontSize: 11 },
+  empty: { textAlign: "center", marginTop: 40, color: colors.faint },
 });

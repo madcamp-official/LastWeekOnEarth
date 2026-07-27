@@ -18,6 +18,8 @@ import { useAuthStore } from "../store/useAuthStore";
 import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { EmailListEditor } from "../components/EmailListEditor";
+import { GradientView } from "../components/GradientView";
+import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
 
@@ -148,15 +150,19 @@ export function MyPageScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable style={styles.avatar} onPress={handlePickPhoto} disabled={uploading}>
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarText}>{user?.name?.[0] ?? "?"}</Text>
-          )}
-          <View style={styles.avatarBadge}>
-            {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.avatarBadgeText}>+</Text>}
-          </View>
+        <Text style={styles.pageTitle}>마이페이지</Text>
+
+        <Pressable onPress={handlePickPhoto} disabled={uploading}>
+          <GradientView style={styles.avatar} borderRadius={44}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{user?.name?.[0] ?? "?"}</Text>
+            )}
+            <View style={styles.avatarBadge}>
+              {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.avatarBadgeText}>+</Text>}
+            </View>
+          </GradientView>
         </Pressable>
 
         {editing ? (
@@ -175,8 +181,10 @@ export function MyPageScreen() {
               <Pressable style={[styles.formButton, styles.cancelButton]} onPress={() => setEditing(false)} disabled={saving}>
                 <Text style={styles.cancelButtonText}>취소</Text>
               </Pressable>
-              <Pressable style={[styles.formButton, styles.saveButton]} onPress={handleSave} disabled={saving}>
-                <Text style={styles.saveButtonText}>{saving ? "저장 중..." : "저장"}</Text>
+              <Pressable style={styles.formButtonFlex} onPress={handleSave} disabled={saving}>
+                <GradientView style={styles.formButton} borderRadius={radius.md}>
+                  <Text style={styles.saveButtonText}>{saving ? "저장 중..." : "저장"}</Text>
+                </GradientView>
               </Pressable>
             </View>
           </View>
@@ -186,8 +194,10 @@ export function MyPageScreen() {
             {user?.affiliation ? <Text style={styles.meta}>{user.affiliation}</Text> : null}
             <Text style={styles.meta}>{user?.phone ?? "전화번호 미등록"}</Text>
 
-            <Pressable style={styles.editButton} onPress={handleStartEdit}>
-              <Text style={styles.editButtonText}>정보 수정</Text>
+            <Pressable onPress={handleStartEdit}>
+              <GradientView style={styles.editButton} borderRadius={radius.sm}>
+                <Text style={styles.editButtonText}>정보 수정</Text>
+              </GradientView>
             </Pressable>
 
             <Pressable style={styles.logoutButton} onPress={handleLogout}>
@@ -225,16 +235,15 @@ export function MyPageScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  content: { flexGrow: 1, alignItems: "center", paddingHorizontal: 24, paddingVertical: 32 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { flexGrow: 1, alignItems: "center", paddingHorizontal: spacing.xxl, paddingBottom: 32 },
+  pageTitle: { fontSize: 26, fontWeight: "800", color: colors.ink, alignSelf: "flex-start", marginTop: 58, marginBottom: spacing.lg },
   avatar: {
     width: 88,
     height: 88,
-    borderRadius: 44,
-    backgroundColor: "#111",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     overflow: "visible",
   },
   avatarImage: { width: 88, height: 88, borderRadius: 44 },
@@ -246,43 +255,51 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#4285F4",
+    backgroundColor: colors.blue,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: colors.bg,
   },
   avatarBadgeText: { color: "#fff", fontWeight: "700", fontSize: 16, lineHeight: 18 },
-  name: { fontSize: 18, fontWeight: "700" },
-  email: { color: "#888", marginTop: 4 },
-  meta: { color: "#888", marginTop: 2 },
+  name: { fontSize: 18, fontWeight: "700", color: colors.ink },
+  email: { color: colors.sub, marginTop: 4 },
+  meta: { color: colors.sub, marginTop: 2 },
   editButton: {
     marginTop: 20,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: "#111",
   },
   editButtonText: { color: "#fff", fontWeight: "600" },
   logoutButton: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: "#DADCE0",
-    borderRadius: 8,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
-  logoutText: { fontWeight: "600", color: "#B00020" },
+  logoutText: { fontWeight: "600", color: colors.danger },
   deleteAccountButton: { marginTop: 16, padding: 8 },
-  deleteAccountText: { color: "#9CA3AF", fontSize: 12, textDecorationLine: "underline" },
+  deleteAccountText: { color: colors.faint, fontSize: 12, textDecorationLine: "underline" },
   form: { width: "100%", gap: 10, marginTop: 8 },
-  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, width: "100%" },
-  formActions: { flexDirection: "row", gap: 8, marginTop: 8 },
-  formButton: { flex: 1, borderRadius: 8, padding: 12, alignItems: "center" },
-  cancelButton: { borderWidth: 1, borderColor: "#DADCE0" },
-  cancelButtonText: { fontWeight: "600", color: "#111" },
-  saveButton: { backgroundColor: "#111" },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 12,
+    width: "100%",
+    color: colors.ink,
+    backgroundColor: colors.card,
+  },
+  formActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
+  formButtonFlex: { flex: 1 },
+  formButton: { borderRadius: radius.md, padding: 12, alignItems: "center" },
+  cancelButton: { borderWidth: 1, borderColor: colors.line, flex: 1, borderRadius: radius.md, padding: 12, alignItems: "center" },
+  cancelButtonText: { fontWeight: "600", color: colors.ink },
   saveButtonText: { color: "#fff", fontWeight: "600" },
   section: { width: "100%", marginTop: 32 },
-  sectionTitle: { fontSize: 14, fontWeight: "700", color: "#111", marginBottom: 8 },
+  sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.ink, marginBottom: 8 },
 });
