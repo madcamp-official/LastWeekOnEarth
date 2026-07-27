@@ -1,4 +1,5 @@
 import React from "react";
+import { Image } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { colors } from "../theme/colors";
 
@@ -16,32 +17,16 @@ export function TabIcon({ name, active }: TabIconProps) {
   const size = 22;
 
   switch (name) {
-    case "contacts":
+    case "contacts": {
+      const handshakeColor = active ? "#7547E8" : "#8D8994";
       return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-          <Path
-            d="M3 10l4.3-4.3c.6-.6 1.6-.6 2.2 0l1.7 1.7"
-            stroke={stroke}
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <Path
-            d="M21 10l-4.3-4.3c-.6-.6-1.6-.6-2.2 0l-1.7 1.7"
-            stroke={stroke}
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <Path
-            d="M4.3 13.2c1.2-1.3 2.3-1.3 3.5 0 1.2 1.3 2.3 1.3 3.5 0 1.2-1.3 2.3-1.3 3.5 0 1.2 1.3 2.3 1.3 3.5 0"
-            stroke={stroke}
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Svg>
+        <Image
+          source={require("../../assets/handshake.png")}
+          style={{ width: size, height: size, tintColor: handshakeColor }}
+          resizeMode="contain"
+        />
       );
+    }
     case "ble":
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
