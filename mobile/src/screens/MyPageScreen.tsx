@@ -15,8 +15,9 @@ import {
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "../store/useAuthStore";
-import { usersApi } from "../services/usersApi";
+import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
+import { EmailListEditor } from "../components/EmailListEditor";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
 
@@ -218,10 +219,6 @@ export function MyPageScreen() {
             }}
           />
         </View>
-
-        <Pressable style={styles.logoutButton} onPress={clear}>
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -257,6 +254,7 @@ const styles = StyleSheet.create({
   },
   avatarBadgeText: { color: "#fff", fontWeight: "700", fontSize: 16, lineHeight: 18 },
   name: { fontSize: 18, fontWeight: "700" },
+  email: { color: "#888", marginTop: 4 },
   meta: { color: "#888", marginTop: 2 },
   editButton: {
     marginTop: 20,
