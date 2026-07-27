@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
-import Svg, { Circle, Path } from "react-native-svg";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { ensureBlePermissions, scanForNearbyCodes, startAdvertising, stopAdvertising } from "../services/bleService";
 import { GradientView } from "../components/GradientView";
@@ -103,9 +102,7 @@ export function BleTagScreen() {
         {!scanning && (
           <View style={styles.idle}>
             <View style={styles.idleOuter}>
-              <GradientView style={styles.idleInner} borderRadius={60}>
-                <BleGlyph />
-              </GradientView>
+              <Image source={require("../../assets/Anchora_main.png")} style={styles.idleLogo} resizeMode="cover" />
             </View>
             <Text style={styles.idleHint}>
               {Platform.OS === "ios"
@@ -175,21 +172,6 @@ export function BleTagScreen() {
   );
 }
 
-function BleGlyph() {
-  return (
-    <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
-      <Circle cx="12" cy="5" r="2.4" stroke="#fff" strokeWidth={1.8} />
-      <Path
-        d="M12 7.5V14M12 14C7.5 14 6 11.5 6 9M12 14C16.5 14 18 11.5 18 9"
-        stroke="#fff"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-      />
-      <Path d="M4 9H8M16 9H20" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-    </Svg>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: { paddingTop: 58, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
@@ -205,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  idleInner: { width: 120, height: 120, alignItems: "center", justifyContent: "center" },
+  idleLogo: { width: 120, height: 120, borderRadius: 60 },
   idleHint: { fontSize: 14, color: colors.sub, marginTop: 24, textAlign: "center", lineHeight: 20, paddingHorizontal: 32 },
   scanning: { alignItems: "center" },
   scanningText: { fontSize: 15, fontWeight: "600", color: colors.ink, marginTop: 28 },

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -20,7 +21,6 @@ import { GoogleLogo } from "../components/GoogleLogo";
 import { notify } from "../utils/confirm";
 import { GradientView } from "../components/GradientView";
 import { colors, radius, spacing } from "../theme/colors";
-import Svg, { Circle, Path } from "react-native-svg";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -159,18 +159,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.logoWrap}>
-          <GradientView style={styles.logoMark} borderRadius={24}>
-            <Svg width={38} height={38} viewBox="0 0 24 24" fill="none">
-              <Circle cx="12" cy="5" r="2.4" stroke="#fff" strokeWidth={1.8} />
-              <Path
-                d="M12 7.5V14M12 14C7.5 14 6 11.5 6 9M12 14C16.5 14 18 11.5 18 9"
-                stroke="#fff"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-              />
-              <Path d="M4 9H8M16 9H20" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-          </GradientView>
+          <Image source={require("../../assets/Anchora_main.png")} style={styles.logoMark} resizeMode="cover" />
           <Text style={styles.title}>Anchora</Text>
           <Text style={styles.subtitle}>스쳐 가는 만남을,{"\n"}오래가는 인맥으로 남겨요</Text>
         </View>
@@ -235,8 +224,7 @@ const styles = StyleSheet.create({
   logoMark: {
     width: 84,
     height: 84,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 24,
     marginBottom: 18,
   },
   title: { fontSize: 30, fontWeight: "800", color: colors.ink, letterSpacing: -0.5 },

@@ -3,6 +3,7 @@
     "name": "Anchora",
     "slug": "lastweekonearth",
     "version": "0.1.0",
+    "icon": "./assets/Anchora_icon.png",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "platforms": [
@@ -11,12 +12,14 @@
       "web"
     ],
     "ios": {
+      "icon": "./assets/Anchora_icon.png",
       "bundleIdentifier": "com.lastweekonearth.app",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "주변 사용자를 태깅하기 위해 블루투스를 사용합니다."
       }
     },
     "android": {
+      "icon": "./assets/Anchora_icon.png",
       "package": "com.lastweekonearth.app"
     },
     "web": {
