@@ -162,6 +162,108 @@ router.post(
   }),
 );
 
+// 스캔 목록에 상대 이름을 보여주기 위한 미리보기 — Contact를 만들지 않고 이름/소속/사진만 조회한다.
+// resolveBleCode(token)만 재사용하고, /ble-tag처럼 Contact를 읽고 쓰는 뒷부분은 실행하지 않는다.
+router.get(
+  "/ble-preview/:token",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const targetUserId = resolveBleCode(req.params.token);
+    if (!targetUserId) {
+      throw new HttpError(400, "유효하지 않거나 만료된 BLE 코드입니다.");
+    }
+    if (targetUserId === req.user!.userId) {
+      throw new HttpError(400, "자기 자신입니다.");
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, name: true, affiliation: true, avatarUrl: true },
+    });
+    if (!targetUser) {
+      throw new HttpError(404, "상대 사용자를 찾을 수 없습니다.");
+    }
+
+    // userId를 같이 내려줘야 클라이언트가 "같은 사람이 스캔 재시작으로 새 코드를 다시 발급받아
+    // 광고한 것"과 "새로운 사람"을 구분할 수 있다 — 코드만으로 구분하면 같은 사람이 두 번 뜬다.
+    res.json({ userId: targetUser.id, name: targetUser.name, affiliation: targetUser.affiliation, avatarUrl: targetUser.avatarUrl });
+  }),
+);
+
+// 인맥 등록은 단방향이다(A가 B를 태깅해도 B의 주소록에 A가 자동으로 생기지 않음). 그래서 "나를
+// 등록한 사람 중, 나는 아직 등록하지 않은 사람" 목록을 보여주고 골라서 등록할 수 있게 한다.
+router.get(
+  "/incoming",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const myId = req.user!.userId;
+
+    // 나를 target으로 등록해둔 사람들(=나를 등록한 사람들)의 소유자 id.
+    const incoming = await prisma.contact.findMany({
+      where: { targetUserId: myId, ownerUserId: { not: myId } },
+      select: { ownerUserId: true },
+      distinct: ["ownerUserId"],
+    });
+    const incomingUserIds = incoming.map((c) => c.ownerUserId);
+    if (incomingUserIds.length === 0) {
+      return res.json([]);
+    }
+
+    // 그 중 내가 이미 등록해둔 사람은 제외한다.
+    const alreadyMine = await prisma.contact.findMany({
+      where: { ownerUserId: myId, targetUserId: { in: incomingUserIds } },
+      select: { targetUserId: true },
+    });
+    const alreadyMineIds = new Set(alreadyMine.map((c) => c.targetUserId));
+    const remainingIds = incomingUserIds.filter((id) => !alreadyMineIds.has(id));
+    if (remainingIds.length === 0) {
+      return res.json([]);
+    }
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: remainingIds } },
+      select: { id: true, name: true, affiliation: true, avatarUrl: true },
+    });
+    return res.json(users);
+  }),
+);
+
+router.post(
+  "/incoming/:userId",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const myId = req.user!.userId;
+    const targetUserId = req.params.userId;
+
+    if (targetUserId === myId) {
+      throw new HttpError(400, "자기 자신을 등록할 수 없습니다.");
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (!targetUser) {
+      throw new HttpError(404, "사용자를 찾을 수 없습니다.");
+    }
+
+    const existing = await prisma.contact.findFirst({ where: { ownerUserId: myId, targetUserId } });
+    if (existing) {
+      throw new HttpError(409, "이미 등록된 사용자입니다.");
+    }
+
+    const contact = await prisma.contact.create({
+      data: {
+        ownerUserId: myId,
+        targetUserId,
+        name: targetUser.name,
+        affiliation: targetUser.affiliation,
+        email: targetUser.email,
+        phone: targetUser.phone,
+        source: "BLE",
+      },
+    });
+    if (contact.email) {
+      await ensureContactPrimaryEmail(contact.id);
+    }
+    res.status(201).json(contact);
+  }),
+);
+
 router.get(
   "/:id",
   asyncHandler(async (req: AuthenticatedRequest, res) => {

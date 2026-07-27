@@ -44,6 +44,14 @@ export interface ContactInput {
   contactMethod?: ContactMethod;
 }
 
+// 나를 등록했지만 나는 아직 등록하지 않은 사용자 (단방향 인맥 등록의 반대편 목록).
+export interface IncomingUser {
+  id: string;
+  name: string;
+  affiliation: string | null;
+  avatarUrl: string | null;
+}
+
 export const contactsApi = {
   list: () => api.get<Contact[]>("/contacts").then((res) => res.data),
 
@@ -68,6 +76,13 @@ export const contactsApi = {
 
   bleTag: (token: string) => api.post<Contact>("/contacts/ble-tag", { token }).then((res) => res.data),
 
+  previewBleCode: (token: string) =>
+    api
+      .get<{ userId: string; name: string; affiliation: string | null; avatarUrl: string | null }>(
+        `/contacts/ble-preview/${token}`,
+      )
+      .then((res) => res.data),
+
   listEmails: (id: string) => api.get<ContactEmail[]>(`/contacts/${id}/emails`).then((res) => res.data),
 
   addEmail: (id: string, email: string) =>
@@ -77,4 +92,9 @@ export const contactsApi = {
     api.post<Contact>(`/contacts/${id}/emails/${emailId}/primary`).then((res) => res.data),
 
   removeEmail: (id: string, emailId: string) => api.delete(`/contacts/${id}/emails/${emailId}`),
+
+  listIncoming: () => api.get<IncomingUser[]>("/contacts/incoming").then((res) => res.data),
+
+  addFromIncoming: (userId: string) =>
+    api.post<Contact>(`/contacts/incoming/${userId}`).then((res) => res.data),
 };

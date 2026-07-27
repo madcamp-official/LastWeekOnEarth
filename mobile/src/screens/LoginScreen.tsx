@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -157,12 +158,17 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoWrap}>
-          <Image source={require("../../assets/Anchora_main.png")} style={styles.logoMark} resizeMode="cover" />
-          <Text style={styles.title}>Anchora</Text>
-          <Text style={styles.subtitle}>스쳐 가는 만남을,{"\n"}오래가는 인맥으로 남겨요</Text>
-        </View>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.logoWrap}>
+            <Image source={require("../../assets/Anchora_main.png")} style={styles.logoMark} resizeMode="cover" />
+            <Text style={styles.title}>Anchora</Text>
+            <Text style={styles.subtitle}>스쳐 가는 만남을,{"\n"}오래가는 인맥으로 남겨요</Text>
+          </View>
 
         <TouchableOpacity
           style={styles.googleButton}
@@ -213,6 +219,7 @@ export default function LoginScreen() {
           </SolidButtonView>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

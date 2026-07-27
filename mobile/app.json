@@ -32,7 +32,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.303266548663-a0agmdvgpoc0llfc4ctn6vh314rtdlg7"
         }
-      ]
+      ],
+      "./plugins/withBlePeripheralIos.js"
     ]
   }
 }

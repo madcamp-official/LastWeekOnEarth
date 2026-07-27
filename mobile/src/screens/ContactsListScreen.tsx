@@ -109,6 +109,9 @@ export function ContactsListScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>인맥</Text>
         <View style={styles.headerActions}>
+          <Pressable style={styles.iconButton} onPress={() => navigation.navigate("IncomingContacts")}>
+            <Text style={styles.iconButtonGlyph}>📥</Text>
+          </Pressable>
           <Pressable style={styles.iconButton} onPress={() => navigation.getParent()?.navigate("Groups")}>
             <Text style={styles.iconButtonGlyph}>👥</Text>
           </Pressable>
