@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import axios from "axios";
+import { colors, radius, spacing } from "../theme/colors";
 
 interface EmailItem {
   id: string;
@@ -79,7 +80,7 @@ export function EmailListEditor({ emails, onAdd, onSetPrimary, onRemove }: Props
           </View>
 
           {busyId === item.id ? (
-            <ActivityIndicator size="small" color="#111" />
+            <ActivityIndicator size="small" color={colors.violet} />
           ) : (
             <View style={styles.rowActions}>
               {!item.isPrimary && (
@@ -115,24 +116,32 @@ export function EmailListEditor({ emails, onAdd, onSetPrimary, onRemove }: Props
 }
 
 const styles = StyleSheet.create({
-  container: { width: "100%", gap: 8 },
+  container: { width: "100%", gap: spacing.sm },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    borderBottomColor: colors.line,
   },
-  rowInfo: { flexDirection: "row", alignItems: "center", flex: 1, gap: 8, marginRight: 8 },
-  email: { flexShrink: 1, fontSize: 14 },
-  primaryBadge: { backgroundColor: "#EEF3FF", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
-  primaryBadgeText: { color: "#4285F4", fontWeight: "600", fontSize: 11 },
-  rowActions: { flexDirection: "row", gap: 12 },
-  link: { color: "#4285F4", fontSize: 12, fontWeight: "600" },
-  remove: { color: "#B00020", fontSize: 12, fontWeight: "600" },
-  addRow: { flexDirection: "row", gap: 8, marginTop: 4 },
-  input: { flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 10 },
-  addButton: { backgroundColor: "#111", borderRadius: 8, paddingHorizontal: 14, justifyContent: "center" },
+  rowInfo: { flexDirection: "row", alignItems: "center", flex: 1, gap: spacing.sm, marginRight: spacing.sm },
+  email: { flexShrink: 1, fontSize: 14, color: colors.ink },
+  primaryBadge: { backgroundColor: colors.violetSoft, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  primaryBadgeText: { color: colors.violet, fontWeight: "600", fontSize: 11 },
+  rowActions: { flexDirection: "row", gap: spacing.md },
+  link: { color: colors.violet, fontSize: 12, fontWeight: "600" },
+  remove: { color: colors.danger, fontSize: 12, fontWeight: "600" },
+  addRow: { flexDirection: "row", gap: spacing.sm, marginTop: 4 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 10,
+    color: colors.ink,
+    backgroundColor: colors.card,
+  },
+  addButton: { backgroundColor: colors.violet, borderRadius: radius.md, paddingHorizontal: 14, justifyContent: "center" },
   addButtonText: { color: "#fff", fontWeight: "600", fontSize: 13 },
 });
