@@ -76,7 +76,7 @@ export function GmailSettingsScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Gmail 발송 연동</Text>
       <Text style={styles.desc}>
-        연동하면 메일함의 초안을 내 Gmail 계정으로 실제 발송/예약 발송할 수 있어요. 현재는 테스트 모드라 허용된
+        Google 계정을 Anchora와 연동하면 메일함의 초안을 내 Gmail 계정으로 실제 발송/예약 발송할 수 있어요. 현재는 테스트 모드라 허용된
         계정만 연동할 수 있어요.
       </Text>
 
