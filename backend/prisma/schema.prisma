@@ -112,6 +112,19 @@ model PhoneVerification {
   @@index([userId])
 }
 
+// 이메일 회원가입 시 실존 메일인지 확인하기 위한 인증코드. PhoneVerification과 같은 모양이지만
+// 계정이 생기기 전(가입 단계)에도 써야 해서 userId 없이 email만으로 발급/조회한다.
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
 // ContactSource: "MANUAL" | "BLE"
 model Contact {
   id              String    @id @default(uuid())

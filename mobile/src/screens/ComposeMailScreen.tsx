@@ -7,6 +7,7 @@ import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -207,6 +208,7 @@ export function ComposeMailScreen({ navigation }: Props) {
   };
 
   return (
+    <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <FlatList
         data={recipientMode === "CONTACT" && !selectedContactId ? filteredContacts : []}
@@ -409,6 +411,7 @@ export function ComposeMailScreen({ navigation }: Props) {
         }
       />
     </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

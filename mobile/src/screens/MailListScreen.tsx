@@ -4,6 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -69,6 +70,7 @@ export function MailListScreen({ navigation }: Props) {
   }, [drafts, query, statusFilter]);
 
   return (
+    <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>메일함</Text>
@@ -158,6 +160,7 @@ export function MailListScreen({ navigation }: Props) {
         }}
       />
     </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

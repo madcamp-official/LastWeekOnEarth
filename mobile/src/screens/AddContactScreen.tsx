@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -86,6 +87,7 @@ export function AddContactScreen({ navigation }: Props) {
   };
 
   return (
+    <KeyboardAvoidingScreen>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
         {photoUrl ? (
@@ -152,6 +154,7 @@ export function AddContactScreen({ navigation }: Props) {
         </SolidButtonView>
       </Pressable>
     </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 

@@ -5,6 +5,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroupDetail } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -92,6 +93,7 @@ export function GroupDetailScreen({ route, navigation }: Props) {
 
   if (editing) {
     return (
+      <KeyboardAvoidingScreen>
       <View style={styles.container}>
         <Text style={styles.label}>그룹 이름</Text>
         <TextInput style={styles.input} value={name} onChangeText={setName} />
@@ -119,6 +121,7 @@ export function GroupDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </View>
+      </KeyboardAvoidingScreen>
     );
   }
 

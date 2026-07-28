@@ -185,6 +185,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   if (!draft) return null;
 
   return (
+    <KeyboardAvoidingScreen>
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.contactName}>
@@ -269,6 +270,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
         </Pressable>
       </Modal>
     </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 
