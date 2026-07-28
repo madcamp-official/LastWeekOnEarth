@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
@@ -35,6 +36,7 @@ function OptionChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 export function AddContactScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [affiliation, setAffiliation] = useState("");
   const [email, setEmail] = useState("");
@@ -89,7 +91,7 @@ export function AddContactScreen({ navigation }: Props) {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <BackButton onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>인맥 추가</Text>
       </View>
@@ -172,7 +174,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     padding: spacing.lg,
-    paddingTop: 58,
   },
   headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
   container: { flexGrow: 1, padding: spacing.lg, paddingTop: 8, gap: spacing.md, backgroundColor: colors.bg },

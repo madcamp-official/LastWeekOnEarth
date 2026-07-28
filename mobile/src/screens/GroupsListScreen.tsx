@@ -1,12 +1,14 @@
 import React, { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { BackButton } from "../components/BackButton";
+import { TrashIcon } from "../components/Icon";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupsList">;
@@ -18,6 +20,7 @@ function formatFrequency(days: number): string {
 }
 
 export function GroupsListScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +48,7 @@ export function GroupsListScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerLeft}>
           <BackButton onPress={() => (navigation.getParent() as any)?.navigate("Home")} />
           <Text style={styles.title}>그룹</Text>
@@ -75,7 +78,7 @@ export function GroupsListScreen({ navigation }: Props) {
                 <Text style={styles.freqBadgeText}>{formatFrequency(item.frequencyDays)}마다 연락</Text>
               </View>
               <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)} hitSlop={8}>
-                <Text style={styles.deleteButtonText}>🗑</Text>
+                <TrashIcon size={16} color={colors.faint} />
               </Pressable>
             </View>
           </Pressable>
@@ -92,7 +95,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: spacing.lg,
-    paddingTop: 58,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
@@ -116,6 +118,5 @@ const styles = StyleSheet.create({
   freqBadge: { backgroundColor: colors.violetSoft, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   freqBadgeText: { color: colors.violet, fontWeight: "600", fontSize: 12 },
   deleteButton: { padding: 6 },
-  deleteButtonText: { fontSize: 16 },
   empty: { textAlign: "center", marginTop: 40, color: colors.faint },
 });

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { useNavigation, type NavigationProp } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { ensureBlePermissions, scanForNearbyCodes, startAdvertising, stopAdvertising } from "../services/bleService";
 import { GradientView } from "../components/GradientView";
@@ -28,6 +29,7 @@ const avatarColorFor = (code: string) => AVATAR_COLORS[code.charCodeAt(0) % AVAT
 // 태깅 완료 후 Home 탭의 ContactDetail로 넘어가려면 부모(탭) 네비게이터를 통해 중첩 이동해야 한다.
 export function BleTagScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
+  const insets = useSafeAreaInsets();
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const stopScanRef = useRef<(() => void) | null>(null);
@@ -137,7 +139,7 @@ export function BleTagScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.title}>태깅</Text>
         <Text style={styles.subtitle}>가까이 있는 사람을 찾아 인맥으로 남겨보세요</Text>
       </View>
@@ -211,7 +213,7 @@ export function BleTagScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingTop: 58, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
+  header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
   subtitle: { fontSize: 13.5, color: colors.sub, marginTop: 4 },
   stage: { flex: 1, alignItems: "center", justifyContent: "center" },

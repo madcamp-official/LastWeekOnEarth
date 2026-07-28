@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
@@ -29,6 +30,7 @@ const GoogleSigninModule = Platform.OS === "web" ? null : require("@react-native
 const GoogleSignin = GoogleSigninModule?.GoogleSignin;
 
 export function MyPageScreen() {
+  const insets = useSafeAreaInsets();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const clear = useAuthStore((s) => s.clear);
@@ -152,7 +154,7 @@ export function MyPageScreen() {
     <View style={styles.container}>
       <KeyboardAvoidingScreen>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.pageTitle}>마이페이지</Text>
+        <Text style={[styles.pageTitle, { marginTop: insets.top + 12 }]}>마이페이지</Text>
 
         <Pressable onPress={handlePickPhoto} disabled={uploading}>
           <GradientView style={styles.avatar} borderRadius={44}>
@@ -240,7 +242,7 @@ export function MyPageScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { flexGrow: 1, alignItems: "center", paddingHorizontal: spacing.xxl, paddingBottom: 32 },
-  pageTitle: { fontSize: 26, fontWeight: "800", color: colors.ink, alignSelf: "flex-start", marginTop: 58, marginBottom: spacing.lg },
+  pageTitle: { fontSize: 26, fontWeight: "800", color: colors.ink, alignSelf: "flex-start", marginBottom: spacing.lg },
   avatar: {
     width: 88,
     height: 88,

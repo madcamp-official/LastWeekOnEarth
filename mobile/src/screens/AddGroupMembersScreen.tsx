@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi } from "../services/groupsApi";
+import { CheckIcon, SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -105,7 +106,7 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
       <Text style={styles.hint}>인맥을 탭해서 체크한 뒤 저장을 눌러주세요.</Text>
 
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <SearchIcon size={15} color={colors.faint} />
         <TextInput
           style={styles.searchInput}
           placeholder="이름, 소속, 이메일 검색"
@@ -137,7 +138,7 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
                 <Text style={styles.meta}>{item.affiliation ?? "-"}</Text>
               </View>
               <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
-                {isSelected ? <Text style={styles.checkboxMark}>✓</Text> : null}
+                {isSelected ? <CheckIcon size={13} color="#fff" /> : null}
               </View>
             </Pressable>
           );
@@ -178,10 +179,10 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.md,
     backgroundColor: colors.card,
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchIcon: { marginRight: 8, fontSize: 14 },
   searchInput: { flex: 1, height: "100%", color: colors.ink },
   list: { flex: 1 },
   listContent: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.lg },
@@ -208,7 +209,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   checkboxActive: { backgroundColor: colors.violet, borderColor: colors.violet },
-  checkboxMark: { color: "#fff", fontSize: 13, fontWeight: "700" },
   empty: { textAlign: "center", marginTop: 40, color: colors.faint },
   footer: {
     padding: spacing.lg,

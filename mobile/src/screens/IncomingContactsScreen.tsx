@@ -1,11 +1,13 @@
 import React, { useCallback, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import axios from "axios";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type IncomingUser } from "../services/contactsApi";
 import { BackButton } from "../components/BackButton";
+import { CheckIcon } from "../components/Icon";
 import { GradientView } from "../components/GradientView";
 import { notify } from "../utils/confirm";
 import { colors, radius, spacing } from "../theme/colors";
@@ -25,6 +27,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 // 인맥 등록은 단방향이라(A가 B를 등록해도 B의 주소록엔 자동으로 안 생김), 나를 등록한 사람 중
 // 내가 아직 등록하지 않은 사람만 모아 보여주고 골라서 등록할 수 있게 한다.
 export function IncomingContactsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [users, setUsers] = useState<IncomingUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
@@ -64,7 +67,7 @@ export function IncomingContactsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerLeft}>
           <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>나를 등록한 사람</Text>
@@ -96,7 +99,10 @@ export function IncomingContactsScreen({ navigation }: Props) {
                 <Text style={styles.meta}>{item.affiliation ?? "-"}</Text>
               </View>
               {added ? (
-                <Text style={styles.done}>등록 완료 ✓</Text>
+                <View style={styles.doneRow}>
+                  <Text style={styles.done}>등록 완료</Text>
+                  <CheckIcon size={13} color={colors.success} />
+                </View>
               ) : (
                 <Pressable onPress={() => handleAdd(item)} disabled={adding}>
                   <GradientView style={styles.addButton} borderRadius={radius.md}>
@@ -114,7 +120,7 @@ export function IncomingContactsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingTop: 58, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   subtitle: { fontSize: 13, color: colors.sub, marginTop: 4, marginLeft: 44 },
@@ -136,6 +142,7 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12.5, color: colors.sub, marginTop: 2 },
   addButton: { paddingHorizontal: 16, paddingVertical: 10 },
   addButtonText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+  doneRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   done: { color: colors.success, fontWeight: "700", fontSize: 13 },
   empty: { textAlign: "center", marginTop: 40, color: colors.faint },
 });
