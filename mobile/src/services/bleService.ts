@@ -224,15 +224,22 @@ export function scanForNearbyCodes(onFound: (code: string, rssi: number) => void
     // 우리 앱이 광고한 신호만 골라낸다 — 그 외 모든 주변 블루투스 기기(에어팟, 다른 앱 등)는
     // 아래 두 조건에 매치되지 않으므로 onFound가 호출되지 않고 목록에도 나타나지 않는다.
     //
-    // Android 피어 판별: manufacturerData의 앞 2바이트(회사 ID, 리틀엔디안)가 우리 앱이 광고할 때
-    // 쓰는 BLE_COMPANY_ID와 같은지만 본다. serviceUUID를 같이 요구하지 않는 이유 — iOS CoreBluetooth는
-    // 주 광고 패킷과 스캔 응답이 서로 다른 콜백으로 나뉘어 올 수 있어(allowDuplicates로 패킷마다
-    // 콜백이 옴), 두 필드가 "한 콜백에 동시에" 있어야만 인식하게 하면 iOS에서는 영영 안 잡힐 수 있다.
+    // Android 피어 판별: manufacturerData의 앞 2바이트(회사 ID, 리틀엔디안)가 BLE_COMPANY_ID(0xFFFF)와
+    // 같은지 + serviceUUIDs에 우리 BLE_SERVICE_UUID가 같이 있는지 둘 다 확인한다. 회사 ID만 보면 오탐이
+    // 난다 — 0xFFFF는 Bluetooth SIG가 "테스트 용도"로 예약해둔 값이라 주변의 다른 BLE 테스트 기기/앱도
+    // 흔히 같은 값을 쓴다(특히 여러 팀이 동시에 BLE를 테스트하는 환경). serviceUUID까지 같이 요구해도
+    // 안전한 이유 — 이건 Android가 broadcast()로 내보내는 광고 패킷 얘기라, uuid와 manufacturerData가
+    // 애초에 한 패킷 안에 같이 실려 나가므로 스캔 쪽 콜백에도 항상 같이 도착한다(아래 iOS 피어 판별과는
+    // 별개 — 그쪽은 serviceUUID만으로 판별하고 manufacturerData를 안 써서 이 얘기가 적용 안 됨).
     // 남은 4바이트가 실제 코드 — 앞의 2바이트(회사 ID)를 떼지 않고 그대로 hex 인코딩하면 8자리가
     // 아닌 12자리가 나와 서버에 잘못된 코드를 보내게 되는 버그가 있었다.
     if (device.manufacturerData != null) {
       const bytes = base64ToBytes(device.manufacturerData);
-      if (bytes.length >= 6 && bytes[0] === (BLE_COMPANY_ID & 0xff) && bytes[1] === ((BLE_COMPANY_ID >> 8) & 0xff)) {
+      const hasOurCompanyId =
+        bytes.length >= 6 && bytes[0] === (BLE_COMPANY_ID & 0xff) && bytes[1] === ((BLE_COMPANY_ID >> 8) & 0xff);
+      const serviceUuids: string[] = device.serviceUUIDs ?? [];
+      const hasOurServiceUuid = serviceUuids.some((u) => u.toLowerCase() === BLE_SERVICE_UUID.toLowerCase());
+      if (hasOurCompanyId && hasOurServiceUuid) {
         const code = bytesToHex(bytes.slice(-4));
         onFound(code, device.rssi);
         return;
