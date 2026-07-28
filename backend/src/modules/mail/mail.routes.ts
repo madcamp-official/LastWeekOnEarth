@@ -5,7 +5,7 @@ import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
 import { generateContactDraft } from "../../lib/gemini";
-import { notImplemented } from "../../lib/notImplemented";
+import { sendEmailDraft } from "../../lib/sendMailDraft";
 
 // CLAUDE.md 섹션 5 (AI 메일/문자 초안 생성)
 const router = Router();
@@ -236,6 +236,7 @@ const updateSchema = z.object({
   subject: z.string().optional(),
   body: z.string().optional(),
   status: z.enum(["DRAFT", "SCHEDULED", "SENT"]).optional(),
+  scheduledAt: z.coerce.date().optional(),
 });
 
 router.patch(
@@ -261,6 +262,15 @@ router.delete(
   }),
 );
 
-router.post("/:id/send", notImplemented);
+// draft 채널이 EMAIL이고 대상(연락처)에 이메일이 있어야 즉시 발송 가능.
+// 그룹 SHARED 초안은 받는 사람이 여러 명이라 여기선 단일 연락처 초안만 지원한다.
+router.post(
+  "/:id/send",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const messageId = await sendEmailDraft(req.params.id, req.user!.userId);
+    const updated = await prisma.emailDraft.findUniqueOrThrow({ where: { id: req.params.id } });
+    res.json({ ...updated, gmailMessageId: messageId });
+  }),
+);
 
 export default router;

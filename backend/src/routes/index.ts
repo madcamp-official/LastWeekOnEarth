@@ -5,6 +5,7 @@ import contactsRoutes from "../modules/contacts/contacts.routes";
 import groupsRoutes from "../modules/groups/groups.routes";
 import cvRoutes from "../modules/cv/cv.routes";
 import mailRoutes from "../modules/mail/mail.routes";
+import gmailAuthRoutes from "../modules/mail/gmailAuth.routes";
 import notificationsRoutes from "../modules/notifications/notifications.routes";
 import postsRoutes from "../modules/posts/posts.routes";
 
@@ -16,6 +17,7 @@ router.use("/contacts", contactsRoutes);
 router.use("/groups", groupsRoutes);
 router.use("/cv", cvRoutes);
 router.use("/mail-drafts", mailRoutes);
+router.use("/mail/gmail", gmailAuthRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/posts", postsRoutes);
 

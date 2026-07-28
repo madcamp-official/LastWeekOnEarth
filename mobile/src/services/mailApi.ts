@@ -59,6 +59,7 @@ export interface DraftUpdateInput {
   subject?: string;
   body?: string;
   status?: MailDraftStatus;
+  scheduledAt?: string;
 }
 
 export const mailApi = {
@@ -76,4 +77,11 @@ export const mailApi = {
     api.patch<MailDraft>(`/mail-drafts/${id}`, input).then((res) => res.data),
 
   remove: (id: string) => api.delete(`/mail-drafts/${id}`),
+
+  send: (id: string) => api.post<MailDraft & { gmailMessageId: string }>(`/mail-drafts/${id}/send`).then((res) => res.data),
+
+  schedule: (id: string, scheduledAt: Date) =>
+    api
+      .patch<MailDraft>(`/mail-drafts/${id}`, { status: "SCHEDULED", scheduledAt: scheduledAt.toISOString() })
+      .then((res) => res.data),
 };

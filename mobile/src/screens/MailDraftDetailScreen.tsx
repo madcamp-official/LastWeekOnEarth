@@ -1,13 +1,36 @@
-import React, { useCallback, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
+import * as WebBrowser from "expo-web-browser";
+import axios from "axios";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
-import { confirmAction } from "../utils/confirm";
+import { gmailApi } from "../services/gmailApi";
+import { confirmAction, notify } from "../utils/confirm";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
+
+// 예약 발송 프리셋 (전용 날짜/시간 선택 UI 없이도 바로 쓸 수 있도록 자주 쓰는 시점만 제공).
+const SCHEDULE_PRESETS: { label: string; getDate: () => Date }[] = [
+  { label: "30분 후", getDate: () => new Date(Date.now() + 30 * 60 * 1000) },
+  { label: "1시간 후", getDate: () => new Date(Date.now() + 60 * 60 * 1000) },
+  { label: "3시간 후", getDate: () => new Date(Date.now() + 3 * 60 * 60 * 1000) },
+  {
+    label: "내일 오전 9시",
+    getDate: () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    },
+  },
+];
+
+function extractErrorMessage(err: unknown): string {
+  return axios.isAxiosError(err) && err.response?.data?.error ? err.response.data.error : "요청 처리 중 오류가 발생했습니다.";
+}
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailDraftDetail">;
 
@@ -20,6 +43,8 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   const [savedSubject, setSavedSubject] = useState("");
   const [savedBody, setSavedBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
 
   const isDirty = subject !== savedSubject || body !== savedBody;
 
@@ -68,6 +93,95 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
     });
   };
 
+  // 발송/예약 전에 편집 중인 내용이 있으면 먼저 저장해 최신 내용으로 보내지도록 한다.
+  const saveIfDirty = async () => {
+    if (!isDirty) return;
+    const updated = await mailApi.update(draftId, { subject, body });
+    setDraft(updated);
+    setSavedSubject(updated.subject);
+    setSavedBody(updated.body);
+  };
+
+  // Gmail 미연동 상태(400)면 동의 화면을 열어주고, 사용자가 승인 후 돌아오면 다시 시도하게 안내한다.
+  const promptGmailConnect = async () => {
+    try {
+      const { consentUrl } = await gmailApi.connect();
+      // expo-web-browser의 openBrowserAsync는 web에서 지원되지 않아(안드로이드 전용) Linking으로 연다.
+      if (Platform.OS === "web") {
+        await Linking.openURL(consentUrl);
+      } else {
+        await WebBrowser.openBrowserAsync(consentUrl);
+      }
+      notify("Gmail 연동 완료 후 다시 시도해주세요.");
+    } catch (err) {
+      notify("Gmail 연동 실패", extractErrorMessage(err));
+    }
+  };
+
+  const handleSendNow = () => {
+    confirmAction(
+      "지금 이 이메일을 발송할까요?",
+      async () => {
+        setSending(true);
+        try {
+          await saveIfDirty();
+          const result = await mailApi.send(draftId);
+          setDraft(result);
+          notify("발송 완료", "메일이 발송되었습니다.");
+        } catch (err) {
+          const message = extractErrorMessage(err);
+          if (message.includes("Gmail 발송 권한")) {
+            await promptGmailConnect();
+          } else {
+            notify("발송 실패", message);
+          }
+        } finally {
+          setSending(false);
+        }
+      },
+      "발송",
+    );
+  };
+
+  const handleSchedule = async (scheduledAt: Date) => {
+    setScheduleModalVisible(false);
+    setSending(true);
+    try {
+      await saveIfDirty();
+      const updated = await mailApi.schedule(draftId, scheduledAt);
+      setDraft(updated);
+      notify("예약 완료", `${scheduledAt.toLocaleString()}에 자동으로 발송돼요.`);
+    } catch (err) {
+      notify("예약 실패", extractErrorMessage(err));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!draft || draft.channel !== "EMAIL") {
+      navigation.setOptions({ headerRight: undefined });
+      return;
+    }
+
+    navigation.setOptions({
+      headerRight: () =>
+        sending ? (
+          <ActivityIndicator style={styles.headerSpinner} />
+        ) : draft.status === "SENT" ? null : (
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => setScheduleModalVisible(true)} hitSlop={8}>
+              <Text style={styles.headerActionText}>예약하기</Text>
+            </Pressable>
+            <Pressable onPress={handleSendNow} hitSlop={8}>
+              <Text style={[styles.headerActionText, styles.headerActionPrimary]}>발송하기</Text>
+            </Pressable>
+          </View>
+        ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, sending, subject, body, isDirty]);
+
   if (!draft) return null;
 
   return (
@@ -80,6 +194,10 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
           <Text style={styles.channelBadgeText}>{draft.channel === "EMAIL" ? "이메일" : "문자"}</Text>
         </View>
       </View>
+      {draft.status === "SENT" && <Text style={styles.statusSent}>발송 완료</Text>}
+      {draft.status === "SCHEDULED" && draft.scheduledAt && (
+        <Text style={styles.statusScheduled}>{new Date(draft.scheduledAt).toLocaleString()}에 예약 발송 예정</Text>
+      )}
       {draft.contact?.affiliation ? <Text style={styles.meta}>{draft.contact.affiliation}</Text> : null}
       {draft.group ? <Text style={styles.meta}>그룹 전체에게 동일하게 발송할 공통 초안이에요.</Text> : null}
 
@@ -125,6 +243,31 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
           )}
         </Pressable>
       </View>
+
+      <Modal
+        visible={scheduleModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setScheduleModalVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setScheduleModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>언제 발송할까요?</Text>
+            {SCHEDULE_PRESETS.map((preset) => (
+              <Pressable
+                key={preset.label}
+                style={styles.modalOption}
+                onPress={() => handleSchedule(preset.getDate())}
+              >
+                <Text style={styles.modalOptionText}>{preset.label}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={styles.modalCancel} onPress={() => setScheduleModalVisible(false)}>
+              <Text style={styles.modalCancelText}>취소</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -160,4 +303,22 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: colors.faint },
   danger: { flex: 1, backgroundColor: colors.danger },
   buttonText: { color: "#fff", fontWeight: "600" },
+  statusSent: { color: colors.blue, fontWeight: "700", marginTop: 6 },
+  statusScheduled: { color: colors.violet, fontWeight: "700", marginTop: 6 },
+  headerActions: { flexDirection: "row", gap: spacing.md, paddingRight: Platform.OS === "ios" ? 0 : spacing.sm },
+  headerActionText: { color: colors.ink, fontWeight: "600", fontSize: 14 },
+  headerActionPrimary: { color: colors.violet, fontWeight: "800" },
+  headerSpinner: { marginRight: spacing.sm },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
+  modalCard: {
+    width: "80%",
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  modalTitle: { fontWeight: "800", fontSize: 16, color: colors.ink, marginBottom: 12 },
+  modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
+  modalOptionText: { fontSize: 15, color: colors.ink },
+  modalCancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
+  modalCancelText: { color: colors.sub, fontWeight: "600" },
 });

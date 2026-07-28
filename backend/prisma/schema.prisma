@@ -43,6 +43,20 @@ model User {
   refreshTokens      RefreshToken[]
   emails             UserEmail[]
   posts              Post[]
+  gmailAuthorization GmailAuthorization?
+}
+
+// 사용자가 "내 대신 Gmail 발송" 권한을 부여한 상태 저장 (OAuth offline access refresh token).
+// 테스트 모드에서는 config/env.ts의 GMAIL_ALLOWED_TEST_EMAILS 허용 목록에 있는 사용자만 연결 가능.
+model GmailAuthorization {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String
+  grantedEmail String
+  scope        String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // 소식(진짜 소셜 피드): 계정을 가진 사람만 쓸 수 있고, "이웃"(BLE로 연결됐거나 이메일이 일치해서

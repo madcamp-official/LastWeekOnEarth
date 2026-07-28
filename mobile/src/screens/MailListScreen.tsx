@@ -72,11 +72,16 @@ export function MailListScreen({ navigation }: Props) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>메일함</Text>
-        <Pressable onPress={() => navigation.navigate("ComposeMail")}>
-          <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
-            <Text style={styles.addButtonText}>+</Text>
-          </SolidButtonView>
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable style={styles.settingsButton} onPress={() => navigation.navigate("GmailSettings")} hitSlop={8}>
+            <Text style={styles.settingsButtonText}>Gmail 연동</Text>
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("ComposeMail")}>
+            <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
+              <Text style={styles.addButtonText}>+</Text>
+            </SolidButtonView>
+          </Pressable>
+        </View>
       </View>
 
       <TextInput
@@ -167,6 +172,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
+  headerButtons: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  settingsButton: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.card,
+  },
+  settingsButtonText: { color: colors.sub, fontWeight: "600", fontSize: 12 },
   addButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
   addButtonText: { color: "#fff", fontWeight: "700", fontSize: 18 },
   searchInput: {

@@ -18,6 +18,13 @@ const envSchema = z.object({
   MAIL_SEND_API_KEY: z.string().optional().default(""),
   // 웹/iOS/Android 클라이언트 ID를 콤마로 구분해 등록 (Google Cloud Console에서 각각 발급)
   GOOGLE_CLIENT_IDS: z.string().min(1, "GOOGLE_CLIENT_IDS is required"),
+
+  // --- Gmail 발송 대행 (OAuth authorization code + offline access, gmail.send scope) ---
+  GOOGLE_OAUTH_CLIENT_ID: z.string().optional().default(""),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional().default(""),
+  GOOGLE_OAUTH_REDIRECT_URI: z.string().optional().default(""),
+  // 테스트 모드: 콤마로 구분된 허용 이메일만 Gmail 연동 가능. 비어있으면 아무도 연동 못 함(안전 기본값).
+  GMAIL_ALLOWED_TEST_EMAILS: z.string().optional().default(""),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -30,4 +37,7 @@ if (!parsed.success) {
 export const env = {
   ...parsed.data,
   GOOGLE_CLIENT_IDS: parsed.data.GOOGLE_CLIENT_IDS.split(",").map((id) => id.trim()),
+  GMAIL_ALLOWED_TEST_EMAILS: parsed.data.GMAIL_ALLOWED_TEST_EMAILS.split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 };
