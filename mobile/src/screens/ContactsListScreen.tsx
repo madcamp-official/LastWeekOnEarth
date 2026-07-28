@@ -6,6 +6,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -105,6 +106,7 @@ export function ContactsListScreen({ navigation }: Props) {
   };
 
   return (
+    <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>인맥</Text>
@@ -210,6 +212,7 @@ export function ContactsListScreen({ navigation }: Props) {
         }}
       />
     </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

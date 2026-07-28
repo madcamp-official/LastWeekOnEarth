@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { GroupsStackParamList } from "../navigation/groupsTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi } from "../services/groupsApi";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -99,6 +100,7 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
   }, [contacts, query]);
 
   return (
+    <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <Text style={styles.hint}>인맥을 탭해서 체크한 뒤 저장을 눌러주세요.</Text>
 
@@ -160,6 +162,7 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
         </Pressable>
       </View>
     </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

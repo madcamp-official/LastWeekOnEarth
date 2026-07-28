@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi } from "../services/postsApi";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -53,6 +54,7 @@ export function CreatePostScreen({ navigation }: Props) {
   };
 
   return (
+    <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <TextInput
         style={styles.contentInput}
@@ -83,6 +85,7 @@ export function CreatePostScreen({ navigation }: Props) {
         </SolidButtonView>
       </Pressable>
     </View>
+    </KeyboardAvoidingScreen>
   );
 }
 

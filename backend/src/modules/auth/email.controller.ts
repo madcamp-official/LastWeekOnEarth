@@ -5,13 +5,50 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { issueTokens } from "../../lib/issueTokens";
 import { generateUniqueUsername } from "../../lib/generateUniqueUsername";
+import { sendVerificationEmail } from "../../lib/mailer";
 
 // 영문 1자 이상 + 숫자 1자 이상 + 총 6자 이상. 신규 가입 시에만 강제한다 (아래 참고).
 const PASSWORD_COMPLEXITY_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
 
+const EMAIL_CODE_TTL_MS = 10 * 60 * 1000;
+
+function generateSixDigitCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+const sendCodeSchema = z.object({
+  email: z.string().email("올바른 이메일 형식이 아닙니다."),
+});
+
+/**
+ * 신규 가입에 필요한 이메일 인증코드를 발급/발송한다. 이미 가입된 이메일이면 코드를 보낼 필요가
+ * 없다(로그인은 비밀번호만으로 되므로) — 대신 계정이 이미 있다고 바로 알려준다.
+ */
+export async function sendEmailCodeHandler(req: Request, res: Response) {
+  const parsed = sendCodeSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "email이 필요합니다." });
+  }
+  const { email } = parsed.data;
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    return res.status(409).json({ error: "이미 가입된 이메일입니다. 로그인해주세요." });
+  }
+
+  const code = generateSixDigitCode();
+  await prisma.emailVerification.create({
+    data: { email, code, expiresAt: new Date(Date.now() + EMAIL_CODE_TTL_MS) },
+  });
+
+  await sendVerificationEmail(email, code);
+  return res.status(200).json({ sent: true });
+}
+
 const emailLoginSchema = z.object({
   email: z.string().email("올바른 이메일 형식이 아닙니다."),
   password: z.string().min(1, "비밀번호를 입력해주세요."),
+  code: z.string().optional(),
 });
 
 /**
@@ -24,7 +61,7 @@ export async function emailLoginHandler(req: Request, res: Response) {
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "email, password가 필요합니다." });
   }
-  const { email, password } = parsed.data;
+  const { email, password, code } = parsed.data;
 
   let user = await prisma.user.findUnique({ where: { email } });
 
@@ -40,6 +77,21 @@ export async function emailLoginHandler(req: Request, res: Response) {
       return res.status(400).json({ error: "비밀번호는 영문+숫자 조합 6자 이상이어야 합니다." });
     }
 
+    // 처음 보는 이메일이면 실존 여부를 인증코드로 확인한다 — 코드가 아직 없으면 클라이언트가
+    // 먼저 /auth/email/send-code를 호출하도록 유도한다.
+    if (!code) {
+      return res.status(428).json({ error: "이메일 인증이 필요합니다.", requiresVerification: true });
+    }
+
+    const verification = await prisma.emailVerification.findFirst({
+      where: { email, code, verified: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!verification) {
+      return res.status(400).json({ error: "인증코드가 올바르지 않거나 만료되었습니다." });
+    }
+    await prisma.emailVerification.update({ where: { id: verification.id }, data: { verified: true } });
+
     const passwordHash = await bcrypt.hash(password, 10);
     const username = await generateUniqueUsername(email.split("@")[0]);
     try {
@@ -50,7 +102,7 @@ export async function emailLoginHandler(req: Request, res: Response) {
           name: "",
           affiliation: "",
           email,
-          emailVerified: false,
+          emailVerified: true,
         },
       });
     } catch (err) {

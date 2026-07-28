@@ -13,6 +13,7 @@ import {
 } from "../services/contactsApi";
 import { confirmAction } from "../utils/confirm";
 import { EmailListEditor } from "../components/EmailListEditor";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
@@ -133,6 +134,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
 
   if (editing) {
     return (
+      <KeyboardAvoidingScreen>
       <ScrollView style={styles.container}>
         <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
           {photoUrl ? (
@@ -204,6 +206,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </ScrollView>
+      </KeyboardAvoidingScreen>
     );
   }
 

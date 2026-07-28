@@ -24,7 +24,13 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
 
 // 계정이 없으면 서버가 그 자리에서 자동으로 만들어준다. 신규 계정은 이름/소속이 비어있는 채로
 // 오므로, 로그인 후 user.name이 비어있으면 프로필 완성 화면으로 보낸다 (App.tsx 참고).
-export async function loginWithEmail(email: string, password: string): Promise<AuthResponse> {
-  const { data } = await api.post<AuthResponse>("/auth/email", { email, password });
+// 처음 보는 이메일이면 서버가 428과 함께 requiresVerification:true를 돌려준다 — 그때
+// sendEmailVerificationCode로 코드를 받아 code까지 같이 넣어서 다시 호출해야 가입이 완료된다.
+export async function loginWithEmail(email: string, password: string, code?: string): Promise<AuthResponse> {
+  const { data } = await api.post<AuthResponse>("/auth/email", { email, password, code });
   return data;
+}
+
+export async function sendEmailVerificationCode(email: string): Promise<void> {
+  await api.post("/auth/email/send-code", { email });
 }

@@ -4,6 +4,7 @@ import axios from "axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { usersApi } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { notify } from "../utils/confirm";
 import { GradientView } from "../components/GradientView";
 import { SolidButtonView } from "../components/SolidButtonView";
@@ -55,6 +56,7 @@ export default function ProfileSetupScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingScreen>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.avatarWrap}>
           <GradientView style={styles.avatar} borderRadius={44}>
@@ -80,6 +82,7 @@ export default function ProfileSetupScreen() {
           </SolidButtonView>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingScreen>
     </SafeAreaView>
   );
 }

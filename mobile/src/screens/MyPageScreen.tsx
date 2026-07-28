@@ -19,6 +19,7 @@ import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { EmailListEditor } from "../components/EmailListEditor";
 import { GradientView } from "../components/GradientView";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -150,6 +151,7 @@ export function MyPageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingScreen>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.pageTitle}>마이페이지</Text>
 
@@ -231,6 +233,7 @@ export function MyPageScreen() {
           />
         </View>
       </ScrollView>
+      </KeyboardAvoidingScreen>
     </SafeAreaView>
   );
 }
