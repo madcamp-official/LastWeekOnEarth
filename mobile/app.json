@@ -30,7 +30,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.303266548663-a0agmdvgpoc0llfc4ctn6vh314rtdlg7"
+          "iosUrlScheme": "com.googleusercontent.apps.122034611912-nc54b1368iesa90kmvkekqouss55s05m"
         }
       ],
       "./plugins/withBlePeripheralIos.js"
