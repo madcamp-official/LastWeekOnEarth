@@ -2,11 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
+import { SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -61,6 +63,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 export function ComposeMailScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [recipientMode, setRecipientMode] = useState<RecipientMode>("CONTACT");
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -216,7 +219,7 @@ export function ComposeMailScreen({ navigation }: Props) {
         refreshing={recipientMode === "CONTACT" ? loadingContacts : loadingGroups}
         onRefresh={recipientMode === "CONTACT" ? loadContacts : loadGroups}
         ListHeaderComponent={
-          <View style={styles.headerSection}>
+          <View style={[styles.headerSection, { paddingTop: insets.top + 12 }]}>
             <Text style={styles.label}>받는 대상</Text>
             <View style={styles.chipRow}>
               <Chip label="받는 사람" active={recipientMode === "CONTACT"} onPress={() => setRecipientMode("CONTACT")} />
@@ -233,7 +236,7 @@ export function ComposeMailScreen({ navigation }: Props) {
                 </View>
               ) : (
                 <View style={styles.searchBox}>
-                  <Text style={styles.searchIcon}>🔍</Text>
+                  <SearchIcon size={15} color={colors.faint} />
                   <TextInput
                     style={styles.searchInput}
                     placeholder="이름, 소속 검색"
@@ -417,13 +420,14 @@ export function ComposeMailScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  headerSection: { padding: spacing.lg, paddingTop: 58, paddingBottom: spacing.sm, gap: spacing.sm },
+  headerSection: { padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
   footerSection: { padding: spacing.lg, gap: spacing.sm },
   label: { fontWeight: "700", marginTop: 12, marginBottom: 4, color: colors.ink },
   hint: { color: colors.sub, fontSize: 12, marginTop: -4 },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
+    gap: spacing.sm,
     paddingHorizontal: 12,
     height: 40,
     borderRadius: radius.md,
@@ -431,7 +435,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchIcon: { marginRight: 8, fontSize: 14 },
   searchInput: { flex: 1, height: "100%", color: colors.ink },
   selectedBox: {
     flexDirection: "row",

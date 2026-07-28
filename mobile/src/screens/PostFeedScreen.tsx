@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi, type Post, type PostComment } from "../services/postsApi";
@@ -25,6 +26,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function PostFeedScreen({ navigation, route }: Props) {
+  const insets = useSafeAreaInsets();
   const myUserId = useAuthStore((s) => s.user?.id);
   const [tab, setTab] = useState<Tab>("MINE");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -112,7 +114,7 @@ export function PostFeedScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.title}>소식</Text>
         <Pressable onPress={() => navigation.navigate("CreatePost")}>
           <SolidButtonView style={styles.addButton} borderRadius={radius.sm}>
@@ -238,7 +240,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 58,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },

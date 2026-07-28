@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
@@ -30,6 +31,7 @@ const STATUS_FILTERS: { key: "all" | MailDraft["status"]; label: string }[] = [
 ];
 
 export function MailListScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [drafts, setDrafts] = useState<MailDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -72,7 +74,7 @@ export function MailListScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingScreen>
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.title}>메일함</Text>
         <View style={styles.headerButtons}>
           <Pressable style={styles.settingsButton} onPress={() => navigation.navigate("GmailSettings")} hitSlop={8}>
@@ -170,7 +172,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 58,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },

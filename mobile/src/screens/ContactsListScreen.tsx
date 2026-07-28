@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
+import { GroupIcon, InboxIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -43,6 +45,7 @@ function lastContactColor(days: number | null): string {
 }
 
 export function ContactsListScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [membership, setMembership] = useState<Record<string, Set<string>>>({});
@@ -108,25 +111,25 @@ export function ContactsListScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingScreen>
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.title}>인맥</Text>
         <View style={styles.headerActions}>
           <Pressable style={styles.iconButton} onPress={() => navigation.navigate("IncomingContacts")}>
-            <Text style={styles.iconButtonGlyph}>📥</Text>
+            <InboxIcon size={18} color={colors.sub} />
           </Pressable>
           <Pressable style={styles.iconButton} onPress={() => navigation.getParent()?.navigate("Groups")}>
-            <Text style={styles.iconButtonGlyph}>👥</Text>
+            <GroupIcon size={18} color={colors.sub} />
           </Pressable>
           <Pressable onPress={() => navigation.navigate("AddContact")}>
             <SolidButtonView style={styles.iconButton} borderRadius={radius.md}>
-              <Text style={styles.iconButtonGlyphLight}>+</Text>
+              <PlusIcon size={18} color="#fff" />
             </SolidButtonView>
           </Pressable>
         </View>
       </View>
 
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <SearchIcon size={15} color={colors.faint} />
         <TextInput
           style={styles.searchInput}
           placeholder="이름, 소속으로 검색"
@@ -205,7 +208,7 @@ export function ContactsListScreen({ navigation }: Props) {
               </View>
 
               <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)} hitSlop={8}>
-                <Text style={styles.deleteButtonText}>🗑</Text>
+                <TrashIcon size={16} color={colors.faint} />
               </Pressable>
             </Pressable>
           );
@@ -219,7 +222,6 @@ export function ContactsListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   header: {
-    paddingTop: 58,
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
     flexDirection: "row",
@@ -238,8 +240,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  iconButtonGlyph: { fontSize: 16 },
-  iconButtonGlyphLight: { fontSize: 18, color: "#fff", fontWeight: "700" },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -253,7 +253,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     gap: spacing.sm,
   },
-  searchIcon: { fontSize: 14 },
   searchInput: { flex: 1, height: "100%", color: colors.ink },
   chipsRow: { flexGrow: 0, marginBottom: spacing.sm },
   chipsContent: { paddingHorizontal: spacing.xl, gap: spacing.sm },
@@ -290,6 +289,5 @@ const styles = StyleSheet.create({
   lastContact: { fontSize: 12, fontWeight: "600" },
   lastContactHint: { fontSize: 10.5, color: colors.faint, marginTop: 2 },
   deleteButton: { padding: 6 },
-  deleteButtonText: { fontSize: 16 },
   empty: { textAlign: "center", marginTop: 40, color: colors.faint },
 });
