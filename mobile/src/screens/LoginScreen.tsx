@@ -16,9 +16,10 @@ import axios from "axios";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import Config from "../config";
-import { loginWithEmail, loginWithGoogle, type AuthResponse } from "../services/auth";
+import { loginWithEmail, loginWithGoogle, sendEmailVerificationCode, type AuthResponse } from "../services/auth";
 import { useAuthStore } from "../store/useAuthStore";
 import { GoogleLogo } from "../components/GoogleLogo";
+import { EyeIcon } from "../components/EyeIcon";
 import { notify } from "../utils/confirm";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -48,7 +49,21 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  // 처음 보는 이메일이면 서버가 인증코드를 요구한다 — 코드를 보내고 나면 이 상태로 전환해서
+  // 코드 입력창을 보여준다. 이메일을 바꾸면 다른 계정 얘기이므로 다시 초기화한다.
+  const [needsCode, setNeedsCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
   const setSession = useAuthStore((s) => s.setSession);
+
+  function handleEmailChange(value: string) {
+    setEmail(value);
+    if (needsCode) {
+      setNeedsCode(false);
+      setCode("");
+    }
+  }
 
   useEffect(() => {
     GoogleSignin?.hasPlayServices({ showPlayServicesUpdateDialog: true }).catch(() => undefined);
@@ -95,6 +110,21 @@ export default function LoginScreen() {
     }
   }
 
+  async function requestEmailCode(targetEmail: string) {
+    setSendingCode(true);
+    try {
+      await sendEmailVerificationCode(targetEmail);
+      setNeedsCode(true);
+      notify("인증코드를 보냈어요", `${targetEmail}로 받은 6자리 코드를 입력해주세요.`);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error ? err.response.data.error : "인증코드를 보내지 못했습니다.";
+      notify("발송 실패", message);
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
   async function handleEmailLogin() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
@@ -109,8 +139,35 @@ export default function LoginScreen() {
       notify("비밀번호는 영문+숫자 조합 6자 이상이어야 합니다.");
       return;
     }
-    // 계정이 없으면 서버가 자동으로 만들어준다 (처음 입력한 비밀번호가 그대로 계정 비밀번호가 됨).
-    await applyBackendLogin(loginWithEmail(trimmedEmail, password));
+    if (needsCode && !code.trim()) {
+      notify("이메일로 받은 인증코드를 입력해주세요.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 계정이 없으면 서버가 자동으로 만들어준다 (처음 입력한 비밀번호가 그대로 계정 비밀번호가 됨) —
+      // 단, 처음 보는 이메일이면 서버가 428로 인증코드를 먼저 요구한다 (아래 catch에서 처리).
+      const { accessToken, refreshToken, user } = await loginWithEmail(
+        trimmedEmail,
+        password,
+        needsCode ? code.trim() : undefined,
+      );
+      setSession(accessToken, refreshToken, user);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 428) {
+        await requestEmailCode(trimmedEmail);
+        return;
+      }
+      console.error(err);
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error
+          ? err.response.data.error
+          : "로그인 처리 중 오류가 발생했습니다.";
+      notify("로그인 실패", message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleGoogleLogin() {
@@ -198,24 +255,59 @@ export default function LoginScreen() {
           style={styles.input}
           placeholder="이메일"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={handleEmailChange}
           autoCapitalize="none"
           keyboardType="email-address"
           editable={!loading}
         />
-        <TextInput
-          style={styles.input}
-          placeholder="비밀번호 (영문+숫자 6자 이상)"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
+        <View style={styles.passwordWrap}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="비밀번호 (영문+숫자 6자 이상)"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!passwordVisible}
+            editable={!loading}
+          />
+          <TouchableOpacity
+            style={styles.passwordToggle}
+            onPress={() => setPasswordVisible((v) => !v)}
+            hitSlop={8}
+          >
+            <EyeIcon visible={passwordVisible} color={colors.faint} />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.emailHint}>처음 로그인하는 이메일이면 자동으로 계정이 만들어져요.</Text>
 
-        <TouchableOpacity style={styles.fullWidth} onPress={handleEmailLogin} disabled={loading} activeOpacity={0.8}>
+        {needsCode && (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="인증코드 6자리"
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              maxLength={6}
+              editable={!loading}
+            />
+            <TouchableOpacity onPress={() => requestEmailCode(email.trim())} disabled={sendingCode} hitSlop={8}>
+              <Text style={styles.resendLink}>{sendingCode ? "재전송 중..." : "인증코드 다시 받기"}</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <TouchableOpacity
+          style={styles.fullWidth}
+          onPress={handleEmailLogin}
+          disabled={loading || sendingCode}
+          activeOpacity={0.8}
+        >
           <SolidButtonView style={styles.emailButton} borderRadius={radius.lg}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.emailButtonText}>이메일로 계속하기</Text>}
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.emailButtonText}>{needsCode ? "인증코드 확인하고 계속하기" : "이메일로 계속하기"}</Text>
+            )}
           </SolidButtonView>
         </TouchableOpacity>
       </ScrollView>
@@ -267,7 +359,17 @@ const styles = StyleSheet.create({
     color: colors.ink,
     backgroundColor: colors.card,
   },
+  passwordWrap: { width: "100%", justifyContent: "center", marginBottom: 10 },
+  passwordInput: { paddingRight: 44, marginBottom: 0 },
+  passwordToggle: {
+    position: "absolute",
+    right: 14,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   emailHint: { color: colors.faint, fontSize: 12, marginBottom: 14, alignSelf: "flex-start" },
+  resendLink: { color: colors.violet, fontSize: 13, fontWeight: "600", marginBottom: 14, alignSelf: "flex-start" },
   fullWidth: { width: "100%" },
   emailButton: {
     width: "100%",

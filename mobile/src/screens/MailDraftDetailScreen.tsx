@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
 import { confirmAction } from "../utils/confirm";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -71,6 +72,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   if (!draft) return null;
 
   return (
+    <KeyboardAvoidingScreen>
     <ScrollView style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.contactName}>
@@ -126,6 +128,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
         </Pressable>
       </View>
     </ScrollView>
+    </KeyboardAvoidingScreen>
   );
 }
 
