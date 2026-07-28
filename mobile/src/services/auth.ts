@@ -34,3 +34,9 @@ export async function loginWithEmail(email: string, password: string, code?: str
 export async function sendEmailVerificationCode(email: string): Promise<void> {
   await api.post("/auth/email/send-code", { email });
 }
+
+// 서버에도 refreshToken을 폐기시켜 탈취된 토큰이 재사용되지 않게 한다. 실패해도 로그아웃 자체는
+// 로컬 세션 삭제로 이어져야 하므로, 호출부에서 실패를 무시해도 안전하다.
+export async function logout(refreshToken: string): Promise<void> {
+  await api.post("/auth/logout", { refreshToken });
+}

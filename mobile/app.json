@@ -33,7 +33,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.122034611912-nc54b1368iesa90kmvkekqouss55s05m"
         }
       ],
-      "./plugins/withBlePeripheralIos.js"
+      "./plugins/withBlePeripheralIos.js",
+      "expo-secure-store"
     ]
   }
 }

@@ -15,6 +15,7 @@ import {
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthStore } from "../store/useAuthStore";
+import { logout } from "../services/auth";
 import { usersApi, type UserEmail } from "../services/usersApi";
 import { PhoneNumberInput } from "../components/PhoneNumberInput";
 import { EmailListEditor } from "../components/EmailListEditor";
@@ -45,6 +46,14 @@ export function MyPageScreen() {
 
   const handleLogout = async () => {
     await signOutOfGoogle();
+    const refreshToken = useAuthStore.getState().refreshToken;
+    if (refreshToken) {
+      try {
+        await logout(refreshToken);
+      } catch {
+        // 서버 폐기가 실패해도 로컬 세션은 어차피 지운다.
+      }
+    }
     clear();
   };
 
