@@ -83,6 +83,14 @@
 			name = LastWeekOnEarth;
 			sourceTree = "<group>";
 		};
+		17983B62DC3245AF8A9EC323 /* BLEPeripheral */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = BLEPeripheral;
+			path = BLEPeripheral;
+			sourceTree = "<group>";
+		};
 		2C2FFAACB335452EBA506BE9 /* BLEPeripheral */ = {
 			isa = PBXGroup;
 			children = (
@@ -119,6 +127,7 @@
 				D7E4C46ADA2E9064B798F356 /* ExpoModulesProviders */,
 				0A7FF14720DC40E0B0E79CE1 /* BLEPeripheral */,
 				2C2FFAACB335452EBA506BE9 /* BLEPeripheral */,
+				17983B62DC3245AF8A9EC323 /* BLEPeripheral */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
