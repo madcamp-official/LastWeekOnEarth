@@ -5,6 +5,7 @@ import axios from "axios";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type IncomingUser } from "../services/contactsApi";
+import { BackButton } from "../components/BackButton";
 import { GradientView } from "../components/GradientView";
 import { notify } from "../utils/confirm";
 import { colors, radius, spacing } from "../theme/colors";
@@ -64,7 +65,10 @@ export function IncomingContactsScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>나를 등록한 사람</Text>
+        <View style={styles.headerLeft}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.title}>나를 등록한 사람</Text>
+        </View>
         <Text style={styles.subtitle}>아직 내 인맥으로 등록하지 않은 사람들이에요</Text>
       </View>
 
@@ -110,9 +114,10 @@ export function IncomingContactsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingTop: 24, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  header: { paddingTop: 58, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 22, fontWeight: "800", color: colors.ink },
-  subtitle: { fontSize: 13, color: colors.sub, marginTop: 4 },
+  subtitle: { fontSize: 13, color: colors.sub, marginTop: 4, marginLeft: 44 },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.sm },
   row: {
     flexDirection: "row",

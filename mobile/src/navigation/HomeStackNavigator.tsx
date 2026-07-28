@@ -13,8 +13,8 @@ export function HomeStackNavigator() {
     <Stack.Navigator initialRouteName="ContactsList">
       <Stack.Screen name="ContactsList" component={ContactsListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ title: "인맥 상세" }} />
-      <Stack.Screen name="AddContact" component={AddContactScreen} options={{ title: "인맥 추가" }} />
-      <Stack.Screen name="IncomingContacts" component={IncomingContactsScreen} options={{ title: "나를 등록한 사람" }} />
+      <Stack.Screen name="AddContact" component={AddContactScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="IncomingContacts" component={IncomingContactsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

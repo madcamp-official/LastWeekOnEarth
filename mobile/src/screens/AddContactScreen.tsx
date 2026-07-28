@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
+import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -87,6 +88,11 @@ export function AddContactScreen({ navigation }: Props) {
   };
 
   return (
+    <View style={styles.screen}>
+      <View style={styles.header}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>인맥 추가</Text>
+      </View>
     <KeyboardAvoidingScreen>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
@@ -155,11 +161,21 @@ export function AddContactScreen({ navigation }: Props) {
       </Pressable>
     </ScrollView>
     </KeyboardAvoidingScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: spacing.lg, paddingTop: 24, gap: spacing.md, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.lg,
+    paddingTop: 58,
+  },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  container: { flexGrow: 1, padding: spacing.lg, paddingTop: 8, gap: spacing.md, backgroundColor: colors.bg },
   photoPicker: {
     width: 88,
     height: 88,
