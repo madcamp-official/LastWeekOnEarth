@@ -241,6 +241,11 @@ export function scanForNearbyCodes(onFound: (code: string, rssi: number) => void
       const hasOurServiceUuid = serviceUuids.some((u) => u.toLowerCase() === BLE_SERVICE_UUID.toLowerCase());
       if (hasOurCompanyId && hasOurServiceUuid) {
         const code = bytesToHex(bytes.slice(-4));
+        // 임시 진단 로그 — 뭐가 우리 필터를 통과하는지 raw 데이터로 확인한다. 원인 찾으면 지울 것.
+        console.warn(
+          "[bleService] MATCHED (android branch):",
+          JSON.stringify({ id: device.id, name: device.name, code, rssi: device.rssi, serviceUUIDs: device.serviceUUIDs }),
+        );
         onFound(code, device.rssi);
         return;
       }
@@ -249,6 +254,11 @@ export function scanForNearbyCodes(onFound: (code: string, rssi: number) => void
     const serviceUuids: string[] = device.serviceUUIDs ?? [];
     const iosServiceUuid = serviceUuids.find((u) => u.toLowerCase().startsWith(IOS_SERVICE_UUID_PREFIX));
     if (iosServiceUuid) {
+      // 임시 진단 로그 — 뭐가 우리 필터를 통과하는지 raw 데이터로 확인한다. 원인 찾으면 지울 것.
+      console.warn(
+        "[bleService] MATCHED (ios branch):",
+        JSON.stringify({ id: device.id, name: device.name, code: iosServiceUuid.slice(-8), rssi: device.rssi, serviceUUIDs: device.serviceUUIDs }),
+      );
       onFound(iosServiceUuid.slice(-8), device.rssi);
     }
   }
