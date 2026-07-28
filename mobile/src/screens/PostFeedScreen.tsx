@@ -1,11 +1,11 @@
 import React, { useCallback, useState } from "react";
-import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
-import { postsApi, type Post } from "../services/postsApi";
+import { postsApi, type Post, type PostComment } from "../services/postsApi";
 import { useAuthStore } from "../store/useAuthStore";
-import { confirmAction } from "../utils/confirm";
+import { confirmAction, notify } from "../utils/confirm";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -29,6 +29,9 @@ export function PostFeedScreen({ navigation, route }: Props) {
   const [tab, setTab] = useState<Tab>("MINE");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const [commentsByPost, setCommentsByPost] = useState<Record<string, PostComment[]>>({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const activeTab = route.params?.initialTab ?? tab;
 
   const load = useCallback(async (target: Tab) => {
@@ -56,6 +59,54 @@ export function PostFeedScreen({ navigation, route }: Props) {
     confirmAction("이 소식을 삭제하시겠습니까?", async () => {
       await postsApi.remove(post.id);
       load(activeTab);
+    });
+  };
+
+  const toggleLike = async (post: Post) => {
+    // 낙관적 업데이트: 서버 응답 기다리지 않고 바로 반영하고, 실패하면 되돌린다.
+    const optimistic = post.likedByMe
+      ? { likedByMe: false, likeCount: Math.max(0, post.likeCount - 1) }
+      : { likedByMe: true, likeCount: post.likeCount + 1 };
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, ...optimistic } : p)));
+
+    try {
+      const result = post.likedByMe ? await postsApi.unlike(post.id) : await postsApi.like(post.id);
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, ...result } : p)));
+    } catch {
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? post : p)));
+      notify("처리 실패", "잠시 후 다시 시도해주세요.");
+    }
+  };
+
+  const toggleComments = async (postId: string) => {
+    if (expandedPostId === postId) {
+      setExpandedPostId(null);
+      return;
+    }
+    setExpandedPostId(postId);
+    if (!commentsByPost[postId]) {
+      const comments = await postsApi.listComments(postId);
+      setCommentsByPost((prev) => ({ ...prev, [postId]: comments }));
+    }
+  };
+
+  const submitComment = async (post: Post) => {
+    const content = (commentDrafts[post.id] ?? "").trim();
+    if (!content) return;
+    const comment = await postsApi.addComment(post.id, content);
+    setCommentsByPost((prev) => ({ ...prev, [post.id]: [...(prev[post.id] ?? []), comment] }));
+    setCommentDrafts((prev) => ({ ...prev, [post.id]: "" }));
+    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, commentCount: p.commentCount + 1 } : p)));
+  };
+
+  const handleDeleteComment = (post: Post, comment: PostComment) => {
+    confirmAction("이 댓글을 삭제하시겠습니까?", async () => {
+      await postsApi.removeComment(post.id, comment.id);
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [post.id]: (prev[post.id] ?? []).filter((c) => c.id !== comment.id),
+      }));
+      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
     });
   };
 
@@ -134,6 +185,46 @@ export function PostFeedScreen({ navigation, route }: Props) {
 
             <Text style={styles.content}>{item.content}</Text>
             {item.photoUrl ? <Image source={{ uri: item.photoUrl }} style={styles.postPhoto} /> : null}
+
+            <View style={styles.socialRow}>
+              <Pressable style={styles.socialButton} onPress={() => toggleLike(item)} hitSlop={8}>
+                <Text style={[styles.socialButtonText, item.likedByMe && styles.likedText]}>
+                  {item.likedByMe ? "♥" : "♡"} {item.likeCount}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.socialButton} onPress={() => toggleComments(item.id)} hitSlop={8}>
+                <Text style={styles.socialButtonText}>댓글 {item.commentCount}</Text>
+              </Pressable>
+            </View>
+
+            {expandedPostId === item.id && (
+              <View style={styles.commentsBox}>
+                {(commentsByPost[item.id] ?? []).map((comment) => (
+                  <View key={comment.id} style={styles.commentRow}>
+                    <Text style={styles.commentAuthor}>{comment.author.name}</Text>
+                    <Text style={styles.commentContent}>{comment.content}</Text>
+                    {comment.authorId === myUserId && (
+                      <Pressable onPress={() => handleDeleteComment(item, comment)} hitSlop={8}>
+                        <Text style={styles.commentDelete}>삭제</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))}
+                <View style={styles.commentInputRow}>
+                  <TextInput
+                    style={styles.commentInput}
+                    placeholder="댓글 달기..."
+                    placeholderTextColor={colors.faint}
+                    value={commentDrafts[item.id] ?? ""}
+                    onChangeText={(text) => setCommentDrafts((prev) => ({ ...prev, [item.id]: text }))}
+                    onSubmitEditing={() => submitComment(item)}
+                  />
+                  <Pressable onPress={() => submitComment(item)} hitSlop={8}>
+                    <Text style={styles.commentSubmit}>등록</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
           </View>
         )}
       />
@@ -181,4 +272,33 @@ const styles = StyleSheet.create({
   content: { marginTop: 10, fontSize: 14, lineHeight: 20, color: colors.ink },
   postPhoto: { width: "100%", aspectRatio: 1.4, borderRadius: radius.sm, marginTop: 10 },
   empty: { textAlign: "center", marginTop: 40, color: colors.faint, paddingHorizontal: 24 },
+  socialRow: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  socialButton: { flexDirection: "row", alignItems: "center" },
+  socialButtonText: { color: colors.sub, fontWeight: "600", fontSize: 13 },
+  likedText: { color: colors.pink },
+  commentsBox: { marginTop: 10, gap: 8 },
+  commentRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  commentAuthor: { fontWeight: "700", fontSize: 12.5, color: colors.ink },
+  commentContent: { fontSize: 12.5, color: colors.ink, flexShrink: 1 },
+  commentDelete: { color: colors.danger, fontSize: 11, marginLeft: "auto" },
+  commentInputRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: colors.ink,
+    backgroundColor: colors.bg,
+  },
+  commentSubmit: { color: colors.violet, fontWeight: "700", fontSize: 13 },
 });

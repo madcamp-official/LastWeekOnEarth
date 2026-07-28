@@ -27,10 +27,15 @@ export async function sendEmailDraft(draftId: string, ownerUserId: string): Prom
     body: draft.body,
   });
 
-  await prisma.emailDraft.update({
-    where: { id: draft.id },
-    data: { status: "SENT" },
-  });
+  const sentAt = new Date();
+  // 발송 = 실제 연락이므로 연락처 로그에도 남기고 lastContactedAt/리마인더 기준일을 갱신한다.
+  await prisma.$transaction([
+    prisma.emailDraft.update({ where: { id: draft.id }, data: { status: "SENT" } }),
+    prisma.contactLog.create({
+      data: { contactId: draft.contact.id, channel: "EMAIL", memo: draft.subject, contactedAt: sentAt },
+    }),
+    prisma.contact.update({ where: { id: draft.contact.id }, data: { lastContactedAt: sentAt } }),
+  ]);
 
   return messageId;
 }

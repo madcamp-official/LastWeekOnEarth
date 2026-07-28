@@ -1,13 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import LoginScreen from "./src/screens/LoginScreen";
 import ProfileSetupScreen from "./src/screens/ProfileSetupScreen";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { registerForPushNotifications } from "./src/services/pushNotifications";
 
 function AppContent() {
   const user = useAuthStore((s) => s.user);
+
+  useEffect(() => {
+    if (user) {
+      void registerForPushNotifications();
+    }
+  }, [user]);
+
   if (!user) return <LoginScreen />;
   // 방금 자동 가입된 계정(이메일이든 Google이든)은 소속/전화번호가 비어있다 — Google은 이름을
   // 자동으로 채워주므로 이름 유무로는 신규 가입을 구분할 수 없어 소속/전화번호 기준으로 판단한다.

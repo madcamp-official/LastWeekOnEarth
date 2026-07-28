@@ -7,6 +7,8 @@ import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.mi
 import { HttpError } from "../../middleware/error.middleware";
 import { ensureUserPrimaryEmail } from "../../lib/emails";
 import { createWelcomePost } from "../../lib/welcomePost";
+import { mergeAccountByPhone } from "../../lib/mergeAccountByPhone";
+import { issueTokens } from "../../lib/issueTokens";
 
 const router = Router();
 
@@ -54,6 +56,24 @@ router.patch(
   "/me",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const body = meUpdateSchema.parse(req.body);
+
+    // 다른 이메일/구글 계정으로 가입했어도 전화번호가 같으면 같은 사람 — 새 계정(현재 세션)을
+    // 원래 계정(먼저 가입된 쪽)에 합친다. 병합이 일어나면 현재 세션의 userId는 삭제되므로
+    // 새 토큰을 발급해 응답한다 (로그인 응답과 동일한 모양).
+    if (body.phone) {
+      const merged = await mergeAccountByPhone(req.user!.userId, body.phone);
+      if (merged) {
+        const { phone: _phone, ...rest } = body;
+        const user = Object.keys(rest).length
+          ? await prisma.user.update({ where: { id: merged.id }, data: rest })
+          : await prisma.user.findUniqueOrThrow({ where: { id: merged.id } });
+
+        const { accessToken, refreshToken } = await issueTokens(user);
+        res.json({ accessToken, refreshToken, user: toPublicUser(user), merged: true });
+        return;
+      }
+    }
+
     // phone은 전화번호 인증 전이므로, 값이 바뀌면 인증 상태를 초기화한다.
     const data = "phone" in body ? { ...body, phoneVerified: false } : body;
 
@@ -75,6 +95,18 @@ router.patch(
       }
       throw err;
     }
+  }),
+);
+
+const pushTokenSchema = z.object({ expoPushToken: z.string().min(1) });
+
+// 연락 리마인더 등 푸시 알림을 보낼 대상 기기 토큰을 등록한다. 로그인 시마다 최신 값으로 덮어쓴다.
+router.put(
+  "/me/push-token",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const { expoPushToken } = pushTokenSchema.parse(req.body);
+    await prisma.user.update({ where: { id: req.user!.userId }, data: { expoPushToken } });
+    res.status(204).send();
   }),
 );
 

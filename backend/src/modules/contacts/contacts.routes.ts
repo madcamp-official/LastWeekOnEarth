@@ -39,6 +39,8 @@ const contactCreateSchema = z.object({
   // 사진은 별도 스토리지 연동 전까지 base64 data URL 문자열을 그대로 저장한다 (User.avatarUrl과 동일 방식).
   photoUrl: z.string().max(5_000_000).nullable().optional(),
   contactMethod: z.enum(["EMAIL", "KAKAO", "CALL", "OTHER"]).optional(),
+  // 이 기간(일)이 지나도록 연락이 없으면 푸시로 리마인드 (기본 90일 = 3개월).
+  reminderIntervalDays: z.coerce.number().int().min(1).optional(),
 });
 
 const contactUpdateSchema = contactCreateSchema.partial();

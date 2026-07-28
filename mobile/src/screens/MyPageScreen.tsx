@@ -32,6 +32,7 @@ const GoogleSignin = GoogleSigninModule?.GoogleSignin;
 export function MyPageScreen() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const setSession = useAuthStore((s) => s.setSession);
   const clear = useAuthStore((s) => s.clear);
 
   const signOutOfGoogle = async () => {
@@ -136,7 +137,14 @@ export function MyPageScreen() {
         affiliation: affiliation.trim(),
         phone: phone.trim() || null,
       });
-      updateUser(updated);
+      // 같은 전화번호로 이미 가입된 계정이 있으면 서버가 두 계정을 합치고 새 세션을 내려준다 —
+      // 이 경우 기존(먼저 가입한) 계정으로 그대로 로그인시킨다.
+      if (updated.merged && updated.accessToken && updated.refreshToken && updated.user) {
+        setSession(updated.accessToken, updated.refreshToken, updated.user);
+        Alert.alert("같은 전화번호로 가입된 계정을 찾아 하나로 합쳤어요.");
+      } else {
+        updateUser(updated);
+      }
       setEditing(false);
     } catch (err) {
       const message =

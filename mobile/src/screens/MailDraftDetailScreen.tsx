@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
@@ -9,24 +9,38 @@ import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
 import { gmailApi } from "../services/gmailApi";
 import { confirmAction, notify } from "../utils/confirm";
+import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
-// 예약 발송 프리셋 (전용 날짜/시간 선택 UI 없이도 바로 쓸 수 있도록 자주 쓰는 시점만 제공).
-const SCHEDULE_PRESETS: { label: string; getDate: () => Date }[] = [
-  { label: "30분 후", getDate: () => new Date(Date.now() + 30 * 60 * 1000) },
-  { label: "1시간 후", getDate: () => new Date(Date.now() + 60 * 60 * 1000) },
-  { label: "3시간 후", getDate: () => new Date(Date.now() + 3 * 60 * 60 * 1000) },
-  {
-    label: "내일 오전 9시",
-    getDate: () => {
-      const d = new Date();
-      d.setDate(d.getDate() + 1);
-      d.setHours(9, 0, 0, 0);
-      return d;
-    },
-  },
-];
+const WEEKDAY_LABEL = ["일", "월", "화", "수", "목", "금", "토"];
+const DATE_CHOICE_DAYS = 14;
+
+function dateOnly(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function buildDateChoices(): Date[] {
+  const today = dateOnly(new Date());
+  return Array.from({ length: DATE_CHOICE_DAYS }, (_, i) => new Date(today.getTime() + i * 24 * 60 * 60 * 1000));
+}
+
+function formatDateChoiceLabel(d: Date, index: number): string {
+  if (index === 0) return "오늘";
+  if (index === 1) return "내일";
+  return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAY_LABEL[d.getDay()]})`;
+}
+
+// 정시/30분 단위 시간 슬롯 (00:00 ~ 23:30, 48개).
+function buildTimeSlots(): { hour: number; minute: number; label: string }[] {
+  const slots: { hour: number; minute: number; label: string }[] = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (const minute of [0, 30]) {
+      slots.push({ hour, minute, label: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` });
+    }
+  }
+  return slots;
+}
 
 function extractErrorMessage(err: unknown): string {
   return axios.isAxiosError(err) && err.response?.data?.error ? err.response.data.error : "요청 처리 중 오류가 발생했습니다.";
@@ -45,6 +59,9 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
+  const dateChoices = useMemo(buildDateChoices, []);
+  const timeSlots = useMemo(buildTimeSlots, []);
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
 
   const isDirty = subject !== savedSubject || body !== savedBody;
 
@@ -141,6 +158,13 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
       },
       "발송",
     );
+  };
+
+  const handleSelectTimeSlot = (hour: number, minute: number) => {
+    const base = dateChoices[selectedDateIndex];
+    const scheduledAt = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, minute, 0, 0);
+    if (scheduledAt.getTime() <= Date.now()) return;
+    handleSchedule(scheduledAt);
   };
 
   const handleSchedule = async (scheduledAt: Date) => {
@@ -252,17 +276,54 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
         onRequestClose={() => setScheduleModalVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setScheduleModalVisible(false)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={styles.modalCardWide} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>언제 발송할까요?</Text>
-            {SCHEDULE_PRESETS.map((preset) => (
-              <Pressable
-                key={preset.label}
-                style={styles.modalOption}
-                onPress={() => handleSchedule(preset.getDate())}
-              >
-                <Text style={styles.modalOptionText}>{preset.label}</Text>
-              </Pressable>
-            ))}
+
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={dateChoices}
+              keyExtractor={(d) => d.toISOString()}
+              contentContainerStyle={styles.dateChipsRow}
+              renderItem={({ item, index }) => {
+                const active = index === selectedDateIndex;
+                return (
+                  <Pressable onPress={() => setSelectedDateIndex(index)}>
+                    {active ? (
+                      <SolidButtonView style={styles.dateChip} borderRadius={radius.pill}>
+                        <Text style={styles.dateChipTextActive}>{formatDateChoiceLabel(item, index)}</Text>
+                      </SolidButtonView>
+                    ) : (
+                      <View style={[styles.dateChip, styles.dateChipInactive]}>
+                        <Text style={styles.dateChipText}>{formatDateChoiceLabel(item, index)}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              }}
+            />
+
+            <FlatList
+              data={timeSlots}
+              keyExtractor={(slot) => slot.label}
+              numColumns={4}
+              style={styles.timeGrid}
+              renderItem={({ item }) => {
+                const base = dateChoices[selectedDateIndex];
+                const slotDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), item.hour, item.minute, 0, 0);
+                const disabled = slotDate.getTime() <= Date.now();
+                return (
+                  <Pressable
+                    style={[styles.timeSlot, disabled && styles.timeSlotDisabled]}
+                    disabled={disabled}
+                    onPress={() => handleSelectTimeSlot(item.hour, item.minute)}
+                  >
+                    <Text style={[styles.timeSlotText, disabled && styles.timeSlotTextDisabled]}>{item.label}</Text>
+                  </Pressable>
+                );
+              }}
+            />
+
             <Pressable style={styles.modalCancel} onPress={() => setScheduleModalVisible(false)}>
               <Text style={styles.modalCancelText}>취소</Text>
             </Pressable>
@@ -318,9 +379,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
+  modalCardWide: {
+    width: "92%",
+    maxHeight: "80%",
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
   modalTitle: { fontWeight: "800", fontSize: 16, color: colors.ink, marginBottom: 12 },
   modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
   modalOptionText: { fontSize: 15, color: colors.ink },
   modalCancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
   modalCancelText: { color: colors.sub, fontWeight: "600" },
+  dateChipsRow: { gap: spacing.sm, paddingBottom: spacing.sm },
+  dateChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
+  dateChipInactive: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.line },
+  dateChipText: { fontSize: 13, fontWeight: "600", color: colors.sub },
+  dateChipTextActive: { fontSize: 13, fontWeight: "600", color: "#fff" },
+  timeGrid: { marginTop: spacing.md, maxHeight: 260 },
+  timeSlot: {
+    flex: 1,
+    margin: 4,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bg,
+  },
+  timeSlotDisabled: { opacity: 0.35 },
+  timeSlotText: { fontSize: 13, fontWeight: "600", color: colors.ink },
+  timeSlotTextDisabled: { color: colors.faint },
 });

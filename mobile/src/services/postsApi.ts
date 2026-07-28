@@ -14,6 +14,18 @@ export interface Post {
   content: string;
   photoUrl: string | null;
   createdAt: string;
+  likeCount: number;
+  commentCount: number;
+  likedByMe: boolean;
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  author: PostAuthor;
+  content: string;
+  createdAt: string;
 }
 
 export interface CreatePostInput {
@@ -29,4 +41,15 @@ export const postsApi = {
   create: (input: CreatePostInput) => api.post<Post>("/posts", input).then((res) => res.data),
 
   remove: (id: string) => api.delete(`/posts/${id}`),
+
+  like: (id: string) => api.post<{ likedByMe: boolean; likeCount: number }>(`/posts/${id}/like`).then((res) => res.data),
+
+  unlike: (id: string) => api.delete<{ likedByMe: boolean; likeCount: number }>(`/posts/${id}/like`).then((res) => res.data),
+
+  listComments: (id: string) => api.get<PostComment[]>(`/posts/${id}/comments`).then((res) => res.data),
+
+  addComment: (id: string, content: string) =>
+    api.post<PostComment>(`/posts/${id}/comments`, { content }).then((res) => res.data),
+
+  removeComment: (postId: string, commentId: string) => api.delete(`/posts/${postId}/comments/${commentId}`),
 };

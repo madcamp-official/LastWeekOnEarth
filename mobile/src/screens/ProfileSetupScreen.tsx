@@ -20,6 +20,7 @@ const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
 export default function ProfileSetupScreen() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const setSession = useAuthStore((s) => s.setSession);
   // Google 로그인은 이름을 이미 채워서 주므로 미리 넣어두고, 이메일 가입은 빈 값에서 시작한다.
   const [name, setName] = useState(user?.name ?? "");
   const [affiliation, setAffiliation] = useState("");
@@ -42,6 +43,13 @@ export default function ProfileSetupScreen() {
         affiliation: affiliation.trim(),
         phone: phone.trim(),
       });
+      // 같은 전화번호로 이미 가입된 계정이 있으면 서버가 두 계정을 합치고 새 세션을 내려준다 —
+      // 이 경우 기존(먼저 가입한) 계정으로 그대로 로그인시킨다.
+      if (updated.merged && updated.accessToken && updated.refreshToken && updated.user) {
+        setSession(updated.accessToken, updated.refreshToken, updated.user);
+        notify("같은 전화번호로 가입된 계정을 찾아 하나로 합쳤어요.");
+        return;
+      }
       updateUser(updated);
     } catch (err) {
       const message =
