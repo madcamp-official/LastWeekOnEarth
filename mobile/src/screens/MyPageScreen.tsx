@@ -5,7 +5,6 @@ import {
   Image,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -158,7 +157,7 @@ export function MyPageScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingScreen>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.pageTitle}>마이페이지</Text>
@@ -242,7 +241,7 @@ export function MyPageScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingScreen>
-    </SafeAreaView>
+    </View>
   );
 }
 
