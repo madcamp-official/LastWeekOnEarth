@@ -1,10 +1,15 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
+import { Animated, Image, StyleSheet, View } from "react-native";
 import { GradientView } from "./GradientView";
 
 const RING_DELAYS = [0, 660, 1320];
-const RING_SIZE = 220;
+// 스캔 취소(idle) 상태의 로고 원(BleTagScreen.tsx의 idleOuter/idleLogo)과 같은 자리에 뜨도록 전체
+// 영역(CONTAINER_SIZE)은 그대로 180으로 맞추되, 파형은 로고 자체(LOGO_SIZE)에서 시작한다 — 이전엔
+// 로고 바깥에 violetSoft 배경 원(180px)이 따로 있어서, 파형이 로고가 아니라 그 배경 원 가장자리에서
+// 시작하는 것처럼 보였다(=로고를 원이 감싸고 있는 느낌). 배경 원을 없애고 로고 크기에서 바로
+// 시작하게 하면 "로고에서 파형이 뻗어나가는" 느낌이 된다.
+const CONTAINER_SIZE = 180;
+const LOGO_SIZE = 120;
 
 /**
  * BLE 스캔 중 화면에 나오는 레이더 펄스. 디자인 원본(anchoraPulse keyframe)은 CSS 애니메이션이라
@@ -40,44 +45,24 @@ export function RadarPulse() {
           style={[
             styles.ring,
             {
-              opacity: value.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.55, 0.35, 0] }),
-              transform: [{ scale: value.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1.9] }) }],
+              opacity: value.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0.6, 0.45, 0] }),
+              transform: [{ scale: value.interpolate({ inputRange: [0, 1], outputRange: [1, 3.4] }) }],
             },
           ]}
         >
-          <GradientView style={StyleSheet.absoluteFill} borderRadius={RING_SIZE / 2} />
+          <GradientView style={StyleSheet.absoluteFill} borderRadius={LOGO_SIZE / 2} />
         </Animated.View>
       ))}
       <View style={styles.center}>
-        <GradientView style={styles.centerGradient} borderRadius={50}>
-          <BleGlyph />
-        </GradientView>
+        <Image source={require("../../assets/Anchora_main.png")} style={styles.centerLogo} resizeMode="cover" />
       </View>
     </View>
   );
 }
 
-function BleGlyph() {
-  return (
-    <View style={styles.glyphWrap}>
-      <Svg width={40} height={40} viewBox="0 0 24 24" fill="none">
-        <Circle cx="12" cy="5" r="2.4" stroke="#fff" strokeWidth={1.8} />
-        <Path
-          d="M12 7.5V14M12 14C7.5 14 6 11.5 6 9M12 14C16.5 14 18 11.5 18 9"
-          stroke="#fff"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-        />
-        <Path d="M4 9H8M16 9H20" stroke="#fff" strokeWidth={1.8} strokeLinecap="round" />
-      </Svg>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { width: RING_SIZE, height: RING_SIZE, alignItems: "center", justifyContent: "center" },
-  ring: { position: "absolute", width: RING_SIZE, height: RING_SIZE, borderRadius: RING_SIZE / 2 },
-  center: { width: 100, height: 100, borderRadius: 50, zIndex: 2 },
-  centerGradient: { width: 100, height: 100, alignItems: "center", justifyContent: "center" },
-  glyphWrap: { alignItems: "center", justifyContent: "center" },
+  container: { width: CONTAINER_SIZE, height: CONTAINER_SIZE, alignItems: "center", justifyContent: "center" },
+  ring: { position: "absolute", width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2 },
+  center: { width: LOGO_SIZE, height: LOGO_SIZE, zIndex: 2 },
+  centerLogo: { width: LOGO_SIZE, height: LOGO_SIZE, borderRadius: LOGO_SIZE / 2 },
 });

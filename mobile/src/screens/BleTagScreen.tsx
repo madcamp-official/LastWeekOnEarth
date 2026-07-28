@@ -200,13 +200,15 @@ export function BleTagScreen() {
         )}
       </View>
 
-      {scanning && (
-        <View style={styles.actions}>
-          <Pressable style={styles.secondaryButton} onPress={handleReset}>
-            <Text style={styles.secondaryButtonText}>스캔 취소</Text>
-          </Pressable>
-        </View>
-      )}
+      <View style={styles.actions}>
+        <Pressable
+          style={[styles.secondaryButton, !scanning && styles.secondaryButtonHidden]}
+          onPress={handleReset}
+          disabled={!scanning}
+        >
+          <Text style={styles.secondaryButtonText}>스캔 취소</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -227,9 +229,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   idleLogo: { width: 120, height: 120, borderRadius: 60 },
-  idleHint: { fontSize: 14, color: colors.sub, marginTop: 24, textAlign: "center", lineHeight: 20, paddingHorizontal: 32 },
+  idleHint: {
+    fontSize: 14,
+    color: colors.sub,
+    marginTop: 24,
+    minHeight: 40,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 32,
+  },
   scanning: { alignItems: "center" },
-  scanningText: { fontSize: 15, fontWeight: "600", color: colors.ink, marginTop: 28 },
+  scanningText: { fontSize: 15, fontWeight: "600", color: colors.ink, marginTop: 24, minHeight: 40 },
   list: { width: "100%" },
   listContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.sm },
   deviceRow: {
@@ -261,5 +271,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  secondaryButtonHidden: { opacity: 0 },
   secondaryButtonText: { color: colors.sub, fontSize: 14, fontWeight: "600" },
 });
