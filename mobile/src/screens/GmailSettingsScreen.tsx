@@ -3,10 +3,16 @@ import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View
 import { useFocusEffect } from "@react-navigation/native";
 import * as WebBrowser from "expo-web-browser";
 import axios from "axios";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { MailStackParamList } from "../navigation/mailTypes";
 import { gmailApi, type GmailStatus } from "../services/gmailApi";
 import { confirmAction, notify } from "../utils/confirm";
+import { BackButton } from "../components/BackButton";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
+
+type Props = NativeStackScreenProps<MailStackParamList, "GmailSettings">;
 
 function extractErrorMessage(err: unknown): string {
   return axios.isAxiosError(err) && err.response?.data?.error ? err.response.data.error : "요청 처리 중 오류가 발생했습니다.";
@@ -14,7 +20,8 @@ function extractErrorMessage(err: unknown): string {
 
 // 메일함 > 설정. "내 대신 Gmail 발송" 권한을 앱 안에서 직접 켜고 끌 수 있게 한다.
 // 테스트 모드에서는 서버 허용 목록(GMAIL_ALLOWED_TEST_EMAILS)에 없는 계정이면 연동이 막혀있다.
-export function GmailSettingsScreen() {
+export function GmailSettingsScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<GmailStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -64,17 +71,19 @@ export function GmailSettingsScreen() {
     );
   };
 
-  if (loading && !status) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Gmail 발송 연동</Text>
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>Gmail 연동</Text>
+      </View>
+
+      {loading && !status ? (
+        <View style={styles.centered}>
+          <ActivityIndicator />
+        </View>
+      ) : (
+      <View style={styles.container}>
       <Text style={styles.desc}>
         Google 계정을 Anchora와 연동하면 메일함의 초안을 내 Gmail 계정으로 실제 발송/예약 발송할 수 있어요. 현재는 테스트 모드라 허용된
         계정만 연동할 수 있어요.
@@ -105,15 +114,24 @@ export function GmailSettingsScreen() {
       <Pressable style={styles.refreshLink} onPress={load}>
         <Text style={styles.refreshLinkText}>상태 새로고침</Text>
       </Pressable>
+      </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  container: { flex: 1, padding: spacing.lg, paddingTop: 0, backgroundColor: colors.bg },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
-  title: { fontSize: 20, fontWeight: "800", color: colors.ink, marginTop: spacing.md },
-  desc: { color: colors.sub, marginTop: spacing.sm, lineHeight: 20 },
+  desc: { color: colors.sub, lineHeight: 20 },
   statusCard: {
     backgroundColor: colors.card,
     borderWidth: 1,

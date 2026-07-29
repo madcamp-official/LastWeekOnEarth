@@ -8,6 +8,7 @@ import type { MailStackParamList } from "../navigation/mailTypes";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { mailApi, type GroupDraftMode, type MailChannel } from "../services/mailApi";
+import { BackButton } from "../components/BackButton";
 import { SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
@@ -211,6 +212,11 @@ export function ComposeMailScreen({ navigation }: Props) {
   };
 
   return (
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>새 초안</Text>
+      </View>
     <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <FlatList
@@ -219,7 +225,7 @@ export function ComposeMailScreen({ navigation }: Props) {
         refreshing={recipientMode === "CONTACT" ? loadingContacts : loadingGroups}
         onRefresh={recipientMode === "CONTACT" ? loadContacts : loadGroups}
         ListHeaderComponent={
-          <View style={[styles.headerSection, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.headerSection}>
             <Text style={styles.label}>받는 대상</Text>
             <View style={styles.chipRow}>
               <Chip label="받는 사람" active={recipientMode === "CONTACT"} onPress={() => setRecipientMode("CONTACT")} />
@@ -415,10 +421,19 @@ export function ComposeMailScreen({ navigation }: Props) {
       />
     </View>
     </KeyboardAvoidingScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
   container: { flex: 1, backgroundColor: colors.bg },
   headerSection: { padding: spacing.lg, paddingBottom: spacing.sm, gap: spacing.sm },
   footerSection: { padding: spacing.lg, gap: spacing.sm },
