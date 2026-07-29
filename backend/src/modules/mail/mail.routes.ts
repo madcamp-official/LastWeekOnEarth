@@ -12,6 +12,11 @@ const router = Router();
 
 router.use(requireAuth);
 
+const draftRelations = {
+  contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } },
+  group: { select: { id: true, name: true } },
+} as const;
+
 async function findOwnedContactOrThrow(id: string, ownerUserId: string) {
   const contact = await prisma.contact.findFirst({ where: { id, ownerUserId } });
   if (!contact) {
@@ -206,10 +211,7 @@ router.get(
     const drafts = await prisma.emailDraft.findMany({
       where: { ownerUserId: req.user!.userId },
       orderBy: { createdAt: "desc" },
-      include: {
-        contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } },
-        group: { select: { id: true, name: true } },
-      },
+      include: draftRelations,
     });
     res.json(drafts);
   }),
@@ -220,10 +222,7 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const draft = await prisma.emailDraft.findFirst({
       where: { id: req.params.id, ownerUserId: req.user!.userId },
-      include: {
-        contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } },
-        group: { select: { id: true, name: true } },
-      },
+      include: draftRelations,
     });
     if (!draft) {
       throw new HttpError(404, "초안을 찾을 수 없습니다.");
@@ -247,7 +246,7 @@ router.patch(
     const updated = await prisma.emailDraft.update({
       where: { id: req.params.id },
       data: body,
-      include: { contact: { select: { id: true, name: true, affiliation: true, photoUrl: true } } },
+      include: draftRelations,
     });
     res.json(updated);
   }),
@@ -268,7 +267,10 @@ router.post(
   "/:id/send",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const messageId = await sendEmailDraft(req.params.id, req.user!.userId);
-    const updated = await prisma.emailDraft.findUniqueOrThrow({ where: { id: req.params.id } });
+    const updated = await prisma.emailDraft.findUniqueOrThrow({
+      where: { id: req.params.id },
+      include: draftRelations,
+    });
     res.json({ ...updated, gmailMessageId: messageId });
   }),
 );

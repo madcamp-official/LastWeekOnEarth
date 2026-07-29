@@ -75,6 +75,105 @@ describe("contacts routes", () => {
     expect(listRes.body.some((c: { id: string }) => c.id === createRes.body.id)).toBe(true);
   });
 
+  it("prevents adding yourself as a manual contact", async () => {
+    const byEmail = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Myself", email: `OWNER_${suffix}@EXAMPLE.COM` });
+
+    expect(byEmail.status).toBe(400);
+    expect(byEmail.body.error).toBe("자기 자신은 인맥으로 추가할 수 없습니다.");
+
+    const owner = await prisma.user.findUniqueOrThrow({ where: { id: ownerId } });
+    const byPhone = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Myself", phone: owner.phone?.replace(/\D/g, "") });
+
+    expect(byPhone.status).toBe(400);
+    expect(byPhone.body.error).toBe("자기 자신은 인맥으로 추가할 수 없습니다.");
+  });
+
+  it("treats the connected Gmail address as the owner's identity", async () => {
+    await prisma.gmailAuthorization.create({
+      data: {
+        userId: ownerId,
+        refreshToken: "test-refresh-token",
+        grantedEmail: "owner.gmail@gmail.com",
+        scope: "gmail.send",
+      },
+    });
+
+    const res = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "My Gmail", email: "owner.gmail+tag@googlemail.com" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("자기 자신은 인맥으로 추가할 수 없습니다.");
+  });
+
+  it("prevents duplicate contact emails, including Gmail aliases", async () => {
+    const first = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "First Gmail Contact", email: "dupli.cate+first@gmail.com" });
+    expect(first.status).toBe(201);
+
+    const duplicate = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Duplicate Gmail Contact", email: "duplicate@googlemail.com" });
+
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error).toBe("이미 인맥에 등록된 이메일입니다.");
+  });
+
+  it("updates an existing contact email", async () => {
+    const createRes = await request(app)
+      .post("/api/contacts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ name: "Editable Email", email: `before_${suffix}@example.com` });
+    expect(createRes.status).toBe(201);
+
+    const emailsRes = await request(app)
+      .get(`/api/contacts/${createRes.body.id}/emails`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    const primaryEmail = emailsRes.body.find((item: { isPrimary: boolean }) => item.isPrimary);
+
+    const updateRes = await request(app)
+      .patch(`/api/contacts/${createRes.body.id}/emails/${primaryEmail.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ email: `after_${suffix}@example.com` });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.email).toBe(`after_${suffix}@example.com`);
+    expect(updateRes.body.isPrimary).toBe(true);
+
+    const contactRes = await request(app)
+      .get(`/api/contacts/${createRes.body.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`);
+    expect(contactRes.body.email).toBe(`after_${suffix}@example.com`);
+  });
+
+  it("prevents adding your own secondary email to a contact", async () => {
+    const alias = `owner_alias_${suffix}@example.com`;
+    await prisma.userEmail.create({
+      data: { userId: ownerId, email: alias, isPrimary: false },
+    });
+    const contact = await prisma.contact.create({
+      data: { ownerUserId: ownerId, name: "Other Person" },
+    });
+
+    const res = await request(app)
+      .post(`/api/contacts/${contact.id}/emails`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({ email: alias.toUpperCase() });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("자기 자신은 인맥으로 추가할 수 없습니다.");
+  });
+
   it("prevents accessing another user's contact", async () => {
     const createRes = await request(app)
       .post("/api/contacts")

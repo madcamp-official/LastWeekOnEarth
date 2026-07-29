@@ -61,6 +61,90 @@ async function findOwnedContactOrThrow(id: string, ownerUserId: string) {
   return contact;
 }
 
+function normalizeEmail(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  const at = normalized.lastIndexOf("@");
+  if (at < 0) return normalized;
+
+  let local = normalized.slice(0, at);
+  let domain = normalized.slice(at + 1);
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    domain = "gmail.com";
+    local = local.split("+", 1)[0].replace(/\./g, "");
+  }
+  return `${local}@${domain}`;
+}
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
+
+async function assertNotOwnerIdentity(
+  ownerUserId: string,
+  email: string | null | undefined,
+  phone: string | null | undefined,
+) {
+  if (!email && !phone) return;
+
+  const owner = await prisma.user.findUnique({
+    where: { id: ownerUserId },
+    select: {
+      email: true,
+      phone: true,
+      emails: { select: { email: true } },
+      gmailAuthorization: { select: { grantedEmail: true } },
+    },
+  });
+  if (!owner) {
+    throw new HttpError(404, "사용자를 찾을 수 없습니다.");
+  }
+
+  const normalizedEmail = email ? normalizeEmail(email) : null;
+  const ownerEmails = [
+    owner.email,
+    ...owner.emails.map((item) => item.email),
+    ...(owner.gmailAuthorization ? [owner.gmailAuthorization.grantedEmail] : []),
+  ].map(normalizeEmail);
+  const matchesEmail = normalizedEmail ? ownerEmails.includes(normalizedEmail) : false;
+
+  const normalizedPhone = phone ? normalizePhone(phone) : null;
+  const ownerPhone = owner.phone ? normalizePhone(owner.phone) : null;
+  const matchesPhone = Boolean(normalizedPhone && ownerPhone && normalizedPhone === ownerPhone);
+
+  if (matchesEmail || matchesPhone) {
+    throw new HttpError(400, "자기 자신은 인맥으로 추가할 수 없습니다.");
+  }
+}
+
+async function assertEmailNotUsedByAnotherContact(
+  ownerUserId: string,
+  email: string | null | undefined,
+  excludeContactId?: string,
+) {
+  if (!email) return;
+
+  const contacts = await prisma.contact.findMany({
+    where: {
+      ownerUserId,
+      ...(excludeContactId ? { id: { not: excludeContactId } } : {}),
+    },
+    select: {
+      email: true,
+      emails: { select: { email: true } },
+    },
+  });
+  const normalizedEmail = normalizeEmail(email);
+  const alreadyUsed = contacts.some((contact) =>
+    [contact.email, ...contact.emails.map((item) => item.email)]
+      .filter((item): item is string => Boolean(item))
+      .some((item) => normalizeEmail(item) === normalizedEmail),
+  );
+
+  if (alreadyUsed) {
+    throw new HttpError(409, "이미 인맥에 등록된 이메일입니다.");
+  }
+}
+
 // 수동으로 입력한 email+phone이 실제 가입 계정과 일치하면 targetUserId로 연동한다(BLE 태깅과 동일한 방식).
 // 본인 계정과 일치하는 경우는 연동하지 않는다(자기 자신을 태깅할 수 없는 것과 동일한 이유).
 async function findLinkedUserId(
@@ -90,6 +174,8 @@ router.post(
   "/",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const body = contactCreateSchema.parse(req.body);
+    await assertNotOwnerIdentity(req.user!.userId, body.email, body.phone);
+    await assertEmailNotUsedByAnotherContact(req.user!.userId, body.email);
     const targetUserId = await findLinkedUserId(body.email, body.phone, req.user!.userId);
     const contact = await prisma.contact.create({
       data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL", targetUserId },
@@ -282,6 +368,12 @@ router.patch(
 
     const nextEmail = "email" in body ? body.email : existing.email;
     const nextPhone = "phone" in body ? body.phone : existing.phone;
+    if ("email" in body || "phone" in body) {
+      await assertNotOwnerIdentity(req.user!.userId, nextEmail, nextPhone);
+    }
+    if ("email" in body) {
+      await assertEmailNotUsedByAnotherContact(req.user!.userId, nextEmail, existing.id);
+    }
     const targetUserId =
       "email" in body || "phone" in body
         ? await findLinkedUserId(nextEmail, nextPhone, req.user!.userId)
@@ -359,6 +451,8 @@ router.post(
     const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
     await ensureContactPrimaryEmail(contact.id);
     const { email } = contactEmailAddSchema.parse(req.body);
+    await assertNotOwnerIdentity(req.user!.userId, email, null);
+    await assertEmailNotUsedByAnotherContact(req.user!.userId, email);
     const isFirst = (await prisma.contactEmail.count({ where: { contactId: contact.id } })) === 0;
 
     try {
@@ -378,6 +472,56 @@ router.post(
   }),
 );
 
+router.patch(
+  "/:id/emails/:emailId",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const contact = await findOwnedContactOrThrow(req.params.id, req.user!.userId);
+    const target = await prisma.contactEmail.findFirst({
+      where: { id: req.params.emailId, contactId: contact.id },
+    });
+    if (!target) {
+      throw new HttpError(404, "이메일을 찾을 수 없습니다.");
+    }
+
+    const { email } = contactEmailAddSchema.parse(req.body);
+    await assertNotOwnerIdentity(req.user!.userId, email, null);
+    await assertEmailNotUsedByAnotherContact(req.user!.userId, email, contact.id);
+
+    const siblingEmails = await prisma.contactEmail.findMany({
+      where: { contactId: contact.id, id: { not: target.id } },
+      select: { email: true },
+    });
+    if (siblingEmails.some((item) => normalizeEmail(item.email) === normalizeEmail(email))) {
+      throw new HttpError(409, "이미 인맥에 등록된 이메일입니다.");
+    }
+    const linkedTargetUserId = target.isPrimary
+      ? await findLinkedUserId(email, contact.phone, req.user!.userId)
+      : null;
+
+    try {
+      const updated = await prisma.$transaction(async (tx) => {
+        const updatedEmail = await tx.contactEmail.update({
+          where: { id: target.id },
+          data: { email },
+        });
+        if (target.isPrimary) {
+          await tx.contact.update({
+            where: { id: contact.id },
+            data: { email, targetUserId: linkedTargetUserId },
+          });
+        }
+        return updatedEmail;
+      });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw new HttpError(409, "이미 인맥에 등록된 이메일입니다.");
+      }
+      throw err;
+    }
+  }),
+);
+
 router.post(
   "/:id/emails/:emailId/primary",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
@@ -388,6 +532,8 @@ router.post(
     if (!target) {
       throw new HttpError(404, "이메일을 찾을 수 없습니다.");
     }
+
+    await assertNotOwnerIdentity(req.user!.userId, target.email, null);
 
     await prisma.$transaction([
       prisma.contactEmail.updateMany({ where: { contactId: contact.id, isPrimary: true }, data: { isPrimary: false } }),

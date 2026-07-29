@@ -88,6 +88,9 @@ export const contactsApi = {
   addEmail: (id: string, email: string) =>
     api.post<ContactEmail>(`/contacts/${id}/emails`, { email }).then((res) => res.data),
 
+  updateEmail: (id: string, emailId: string, email: string) =>
+    api.patch<ContactEmail>(`/contacts/${id}/emails/${emailId}`, { email }).then((res) => res.data),
+
   setPrimaryEmail: (id: string, emailId: string) =>
     api.post<Contact>(`/contacts/${id}/emails/${emailId}/primary`).then((res) => res.data),
 

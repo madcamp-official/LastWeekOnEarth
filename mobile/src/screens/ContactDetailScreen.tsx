@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import axios from "axios";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -11,7 +12,7 @@ import {
   type ContactLog,
   type ContactMethod,
 } from "../services/contactsApi";
-import { confirmAction } from "../utils/confirm";
+import { confirmAction, notify } from "../utils/confirm";
 import { EmailListEditor } from "../components/EmailListEditor";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { colors, radius, spacing } from "../theme/colors";
@@ -27,6 +28,14 @@ const CONTACT_METHOD_OPTIONS: { label: string; value: ContactMethod }[] = [
 
 function formatContactMethod(method: ContactMethod): string {
   return CONTACT_METHOD_OPTIONS.find((option) => option.value === method)?.label ?? "기타";
+}
+
+function getSaveErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    if (err.response?.data?.error) return err.response.data.error;
+    if (!err.response) return "서버에 연결할 수 없습니다. 네트워크 상태를 확인해주세요.";
+  }
+  return err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
 }
 
 export function ContactDetailScreen({ route, navigation }: Props) {
@@ -124,7 +133,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       setContact(updated);
       setEditing(false);
     } catch (err) {
-      Alert.alert("저장 실패", err instanceof Error ? err.message : "알 수 없는 오류");
+      notify("저장 실패", getSaveErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -184,6 +193,14 @@ export function ContactDetailScreen({ route, navigation }: Props) {
             onAdd={async (value) => {
               await contactsApi.addEmail(contactId, value);
               await loadEmails();
+            }}
+            onUpdate={async (id, value) => {
+              await contactsApi.updateEmail(contactId, id, value);
+              const [updatedContact] = await Promise.all([
+                contactsApi.get(contactId),
+                loadEmails(),
+              ]);
+              setContact(updatedContact);
             }}
             onSetPrimary={async (id) => {
               const updated = await contactsApi.setPrimaryEmail(contactId, id);
