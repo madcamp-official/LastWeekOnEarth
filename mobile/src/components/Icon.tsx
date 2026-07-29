@@ -149,6 +149,23 @@ export function ProfileCardIcon({ size = 16, color, strokeWidth = 1.7 }: IconPro
   );
 }
 
+export function CloseIcon({ size = 16, color, strokeWidth = 2 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M5 5l14 14M19 5L5 19" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function DownloadIcon({ size = 16, color, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 3.5v11.5M7.5 11l4.5 4.5L16.5 11" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M4.5 17v2.3c0 .66.54 1.2 1.2 1.2h12.6c.66 0 1.2-.54 1.2-1.2V17" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function PlusIcon({ size = 16, color, strokeWidth = 2 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

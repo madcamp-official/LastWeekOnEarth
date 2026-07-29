@@ -9,6 +9,7 @@ import { confirmAction } from "../utils/confirm";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { BackButton } from "../components/BackButton";
 import { TrashIcon } from "../components/Icon";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupsList">;
@@ -21,6 +22,7 @@ function formatFrequency(days: number): string {
 
 export function GroupsListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -65,7 +67,7 @@ export function GroupsListScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={<Text style={styles.empty}>아직 그룹이 없습니다. 새 그룹을 만들어보세요.</Text>}
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => navigation.navigate("GroupDetail", { groupId: item.id })}>

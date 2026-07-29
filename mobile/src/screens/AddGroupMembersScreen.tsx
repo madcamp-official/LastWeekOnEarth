@@ -9,6 +9,7 @@ import { groupsApi } from "../services/groupsApi";
 import { CheckIcon, SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "AddGroupMembers">;
@@ -21,6 +22,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 }
 
 export function AddGroupMembersScreen({ route, navigation }: Props) {
+  const tabBarHeight = useTabBarHeight();
   const { groupId } = route.params;
   const [contacts, setContacts] = useState<Contact[]>([]);
   // 서버에 실제로 저장된 구성원 (변경분 계산의 기준값)
@@ -122,7 +124,7 @@ export function AddGroupMembersScreen({ route, navigation }: Props) {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={
           <Text style={styles.empty}>{query ? "검색 결과가 없습니다." : "등록된 인맥이 없습니다."}</Text>
         }

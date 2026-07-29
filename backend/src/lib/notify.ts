@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { sendExpoPushNotification } from "./expoPush";
+import { emitToUser } from "./socket";
 
 interface NotifyUserInput {
   userId: string;
@@ -26,7 +27,12 @@ export async function notifyUser(input: NotifyUserInput): Promise<void> {
       scheduledAt: new Date(),
       sent: true,
     },
+    include: { actor: { select: { id: true, name: true, avatarUrl: true } } },
   });
+
+  // 앱이 켜져 있으면(소켓 연결 중) 알림 화면 API 응답과 동일한 모양으로 즉시 밀어준다 —
+  // NotificationsScreen뿐 아니라 이 이벤트를 재사용하는 쪽지/소식 화면도 같은 신호로 갱신된다.
+  emitToUser(input.userId, "notification:new", notification);
 
   const recipient = await prisma.user.findUnique({ where: { id: input.userId }, select: { expoPushToken: true } });
   if (recipient?.expoPushToken) {

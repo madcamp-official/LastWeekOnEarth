@@ -7,6 +7,7 @@ import { ensureBlePermissions, scanForNearbyCodes, startAdvertising, stopAdverti
 import { GradientView } from "../components/GradientView";
 import { RadarPulse } from "../components/RadarPulse";
 import { notify } from "../utils/confirm";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 interface FoundDevice {
@@ -30,6 +31,7 @@ const avatarColorFor = (code: string) => AVATAR_COLORS[code.charCodeAt(0) % AVAT
 export function BleTagScreen() {
   const navigation = useNavigation<NavigationProp<any>>();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<FoundDevice[]>([]);
   const stopScanRef = useRef<(() => void) | null>(null);
@@ -166,7 +168,7 @@ export function BleTagScreen() {
         {scanning && devices.length > 0 && (
           <FlatList
             style={styles.list}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight }]}
             data={devices}
             keyExtractor={(item) => item.code}
             renderItem={({ item }) => (

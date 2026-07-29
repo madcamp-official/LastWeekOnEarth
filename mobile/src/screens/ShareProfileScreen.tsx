@@ -7,6 +7,7 @@ import { messagesApi } from "../services/messagesApi";
 import { contactsApi } from "../services/contactsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import { BackButton } from "../components/BackButton";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "ShareProfile">;
@@ -24,6 +25,7 @@ interface ShareEntry {
 // 나 자신은 sharedProfileId로 보낸다.
 export function ShareProfileScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const myUser = useAuthStore((s) => s.user);
   const { userName } = route.params;
   const [contacts, setContacts] = useState<ShareEntry[]>([]);
@@ -78,7 +80,7 @@ export function ShareProfileScreen({ navigation, route }: Props) {
       <FlatList
         data={entries}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={<Text style={styles.empty}>{loading ? "" : "공유할 수 있는 인맥이 없습니다."}</Text>}
         renderItem={({ item }) => (
           <Pressable style={styles.row} onPress={() => handleShare(item)} disabled={sendingId !== null}>

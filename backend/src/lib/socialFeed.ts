@@ -34,6 +34,52 @@ export async function getNeighborUserIds(myUserId: string): Promise<string[]> {
 }
 
 /**
+ * getNeighborUserIds의 반대 방향 — "나를 이웃으로 보고 있는(=내 소식이 피드에 뜨는) 사람들".
+ * 새 소식을 올렸을 때 누구에게 알림을 보낼지 정할 때 쓴다.
+ */
+export async function getFollowerUserIds(myUserId: string): Promise<string[]> {
+  const me = await prisma.user.findUnique({
+    where: { id: myUserId },
+    select: { email: true, emails: { select: { email: true } } },
+  });
+  if (!me) return [];
+
+  const myEmails = [me.email, ...me.emails.map((e) => e.email)];
+
+  const contacts = await prisma.contact.findMany({
+    where: {
+      ownerUserId: { not: myUserId },
+      OR: [{ targetUserId: myUserId }, { email: { in: myEmails } }],
+    },
+    select: { ownerUserId: true },
+  });
+
+  return Array.from(new Set(contacts.map((c) => c.ownerUserId)));
+}
+
+/**
+ * resolveContactUserId의 반대 방향 — "내(ownerUserId)가 등록해둔 인맥 중 이 계정(targetUserId)에
+ * 해당하는 Contact"를 찾는다. 쪽지를 보낼 때 "연락했음"과 동일하게 자동으로 로그를 남길지
+ * 판단하는 데 쓴다 — 상대를 인맥으로 등록해두지 않았으면(예: 이웃이지만 미등록) null을 반환한다.
+ */
+export async function findOwnedContactForUser(ownerUserId: string, targetUserId: string) {
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { email: true, emails: { select: { email: true } } },
+  });
+  if (!target) return null;
+
+  const targetEmails = [target.email, ...target.emails.map((e) => e.email)];
+
+  return prisma.contact.findFirst({
+    where: {
+      ownerUserId,
+      OR: [{ targetUserId }, { email: { in: targetEmails } }],
+    },
+  });
+}
+
+/**
  * 인맥 한 명이 실제로 어떤 계정에 연결되는지 판별한다 (targetUserId 직접 연결 또는 이메일 일치).
  * 메일함에서 쪽지 자동 전송처럼 "이 인맥이 계정을 가진 사람인가"를 개별로 확인할 때 쓴다.
  */

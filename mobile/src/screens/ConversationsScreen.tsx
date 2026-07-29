@@ -1,12 +1,15 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { messagesApi, type Conversation } from "../services/messagesApi";
 import { BackButton } from "../components/BackButton";
 import { PlusIcon } from "../components/Icon";
+import { SolidButtonView } from "../components/SolidButtonView";
+import { useFocusedInterval } from "../hooks/useFocusedInterval";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
+import { getSocket } from "../services/socket";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "Conversations">;
@@ -25,6 +28,7 @@ function formatRelativeTime(iso: string): string {
 
 export function ConversationsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -37,11 +41,18 @@ export function ConversationsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  // 소켓 안전망 폴링 — 새 쪽지는 아래 소켓 리스너로 즉시 갱신된다.
+  useFocusedInterval(load, 20000);
+
+  // 아무 대화방에서든 쪽지가 오면 목록(마지막 메시지/안 읽음 배지)을 즉시 새로고침한다.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    socket.on("message:new", load);
+    return () => {
+      socket.off("message:new", load);
+    };
+  }, [load]);
 
   return (
     <View style={styles.container}>
@@ -50,8 +61,10 @@ export function ConversationsScreen({ navigation }: Props) {
           <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.title}>쪽지</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate("NewConversation")} hitSlop={8}>
-          <PlusIcon size={20} color={colors.ink} />
+        <Pressable onPress={() => navigation.navigate("NewConversation")}>
+          <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
+            <PlusIcon size={18} color="#fff" />
+          </SolidButtonView>
         </Pressable>
       </View>
 
@@ -60,7 +73,7 @@ export function ConversationsScreen({ navigation }: Props) {
         keyExtractor={(item) => item.partner.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={<Text style={styles.empty}>{loading ? "" : "아직 주고받은 쪽지가 없습니다."}</Text>}
         renderItem={({ item }) => (
           <Pressable
@@ -108,11 +121,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    padding: spacing.lg,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
+  addButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.sm },
   row: {
     flexDirection: "row",

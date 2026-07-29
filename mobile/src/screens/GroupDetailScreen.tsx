@@ -7,6 +7,7 @@ import { groupsApi, type ContactGroupDetail } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<GroupsStackParamList, "GroupDetail">;
@@ -41,6 +42,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 }
 
 export function GroupDetailScreen({ route, navigation }: Props) {
+  const tabBarHeight = useTabBarHeight();
   const { groupId } = route.params;
   const [group, setGroup] = useState<ContactGroupDetail | null>(null);
   const [editing, setEditing] = useState(false);
@@ -150,6 +152,7 @@ export function GroupDetailScreen({ route, navigation }: Props) {
       <FlatList
         data={group.contacts}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: tabBarHeight }}
         ListEmptyComponent={<Text style={styles.empty}>아직 추가된 인맥이 없습니다.</Text>}
         renderItem={({ item }) => (
           <View style={styles.row}>
