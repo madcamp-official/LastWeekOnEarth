@@ -10,7 +10,7 @@ export interface SendDraftDmResult {
   dmSkippedReason?: string;
 }
 
-export interface SendEmailDraftResult extends SendDraftDmResult {
+export interface SendEmailDraftResult {
   messageId: string;
 }
 
@@ -82,9 +82,9 @@ export async function sendEmailDraft(draftId: string, ownerUserId: string): Prom
     prisma.contact.update({ where: { id: draft.contact.id }, data: { lastContactedAt: sentAt } }),
   ]);
 
-  const targetUserId = await resolveContactUserId(draft.contact);
-  const dmResult = await sendDraftAsDm(ownerUserId, targetUserId, draft.subject, draft.body);
-  return { messageId, ...dmResult };
+  // 메일 채널은 Gmail 발송이 곧 실제 연락이라 쪽지까지 중복으로 보내지 않는다
+  // (쪽지 자동 발송은 TEXT 채널 — 실제 SMS 연동이 없어 쪽지가 유일한 발송 수단인 경우만).
+  return { messageId };
 }
 
 /**

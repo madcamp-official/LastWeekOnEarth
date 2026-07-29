@@ -166,6 +166,14 @@ export function DownloadIcon({ size = 16, color, strokeWidth = 1.8 }: IconProps)
   );
 }
 
+export function DragHandleIcon({ size = 16, color, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 7h16M4 12h16M4 17h16" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function PlusIcon({ size = 16, color, strokeWidth = 2 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

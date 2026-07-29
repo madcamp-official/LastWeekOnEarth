@@ -15,6 +15,8 @@ export interface Contact {
   contactMethod: ContactMethod;
   source: ContactSource;
   targetUserId: string | null;
+  // 계정과 연결된 인맥이면, 상대가 마이페이지에 등록해둔 모든 이메일(대표 포함, 대표가 맨 앞).
+  linkedEmails?: string[];
   lastContactedAt: string | null;
   createdAt: string;
 }
@@ -64,6 +66,8 @@ export const contactsApi = {
     api.patch<Contact>(`/contacts/${id}`, input).then((res) => res.data),
 
   remove: (id: string) => api.delete(`/contacts/${id}`),
+
+  reorder: (order: string[]) => api.patch("/contacts/reorder", { order }),
 
   addLog: (id: string, channel: LogChannel, memo?: string) =>
     api.post<ContactLog>(`/contacts/${id}/logs`, { channel, memo }).then((res) => res.data),
