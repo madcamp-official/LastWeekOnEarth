@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type ContactMethod } from "../services/contactsApi";
+import { ActionSheet } from "../components/ActionSheet";
 import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
@@ -47,6 +48,7 @@ export function AddContactScreen({ navigation }: Props) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [contactMethod, setContactMethod] = useState<ContactMethod>("OTHER");
   const [submitting, setSubmitting] = useState(false);
+  const [photoMenuVisible, setPhotoMenuVisible] = useState(false);
 
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -55,16 +57,34 @@ export function AddContactScreen({ navigation }: Props) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.6,
-      base64: true,
-    });
-    if (result.canceled || !result.assets[0]?.base64) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.base64) {
+        console.warn("[AddContactScreen] picker result missing base64:", JSON.stringify(result));
+        Alert.alert("사진을 불러오지 못했습니다.", "다른 사진으로 다시 시도해주세요.");
+        return;
+      }
+      setPhotoUrl(`data:image/jpeg;base64,${asset.base64}`);
+    } catch (err) {
+      console.warn("[AddContactScreen] photo pick failed:", err);
+      Alert.alert("사진 선택 실패", err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+    }
+  };
 
-    setPhotoUrl(`data:image/jpeg;base64,${result.assets[0].base64}`);
+  const handlePhotoPress = () => {
+    if (!photoUrl) {
+      handlePickPhoto();
+      return;
+    }
+    setPhotoMenuVisible(true);
   };
 
   const handleSubmit = async () => {
@@ -103,7 +123,7 @@ export function AddContactScreen({ navigation }: Props) {
       </View>
     <KeyboardAvoidingScreen>
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
+      <Pressable style={styles.photoPicker} onPress={handlePhotoPress}>
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.photo} />
         ) : (
@@ -169,6 +189,14 @@ export function AddContactScreen({ navigation }: Props) {
       </Pressable>
     </ScrollView>
     </KeyboardAvoidingScreen>
+    <ActionSheet
+      visible={photoMenuVisible}
+      onClose={() => setPhotoMenuVisible(false)}
+      options={[
+        { label: "사진 변경", onPress: handlePickPhoto },
+        { label: "사진 삭제", onPress: () => setPhotoUrl(null), destructive: true },
+      ]}
+    />
     </View>
   );
 }

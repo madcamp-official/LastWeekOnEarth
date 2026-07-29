@@ -9,6 +9,7 @@ import { postsApi } from "../services/postsApi";
 import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { ActionSheet } from "../components/ActionSheet";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "CreatePost">;
@@ -17,6 +18,7 @@ export function CreatePostScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [content, setContent] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoMenuVisible, setPhotoMenuVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handlePickPhoto = async () => {
@@ -26,14 +28,32 @@ export function CreatePostScreen({ navigation }: Props) {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.6,
-      base64: true,
-    });
-    if (result.canceled || !result.assets[0]?.base64) return;
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.base64) {
+        console.warn("[CreatePostScreen] picker result missing base64:", JSON.stringify(result));
+        Alert.alert("사진을 불러오지 못했습니다.", "다른 사진으로 다시 시도해주세요.");
+        return;
+      }
+      setPhotoUrl(`data:image/jpeg;base64,${asset.base64}`);
+    } catch (err) {
+      console.warn("[CreatePostScreen] photo pick failed:", err);
+      Alert.alert("사진 선택 실패", err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+    }
+  };
 
-    setPhotoUrl(`data:image/jpeg;base64,${result.assets[0].base64}`);
+  const handlePhotoPress = () => {
+    if (!photoUrl) {
+      handlePickPhoto();
+      return;
+    }
+    setPhotoMenuVisible(true);
   };
 
   const handleSubmit = async () => {
@@ -64,6 +84,16 @@ export function CreatePostScreen({ navigation }: Props) {
       </View>
     <KeyboardAvoidingScreen>
     <View style={styles.container}>
+      {photoUrl ? (
+        <Pressable onPress={handlePhotoPress}>
+          <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
+        </Pressable>
+      ) : (
+        <Pressable style={styles.photoPicker} onPress={handlePhotoPress}>
+          <Text style={styles.photoPickerText}>+ 사진 추가</Text>
+        </Pressable>
+      )}
+
       <TextInput
         style={styles.contentInput}
         placeholder="무슨 소식이 있나요?"
@@ -74,19 +104,6 @@ export function CreatePostScreen({ navigation }: Props) {
         textAlignVertical="top"
       />
 
-      {photoUrl ? (
-        <View style={styles.photoPreviewWrap}>
-          <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
-          <Pressable style={styles.removePhotoButton} onPress={() => setPhotoUrl(null)}>
-            <Text style={styles.removePhotoText}>사진 제거</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable style={styles.photoPicker} onPress={handlePickPhoto}>
-          <Text style={styles.photoPickerText}>+ 사진 추가</Text>
-        </Pressable>
-      )}
-
       <Pressable onPress={handleSubmit} disabled={submitting}>
         <SolidButtonView style={styles.submitButton} borderRadius={radius.md}>
           <Text style={styles.submitButtonText}>{submitting ? "게시 중..." : "소식 올리기"}</Text>
@@ -94,6 +111,14 @@ export function CreatePostScreen({ navigation }: Props) {
       </Pressable>
     </View>
     </KeyboardAvoidingScreen>
+    <ActionSheet
+      visible={photoMenuVisible}
+      onClose={() => setPhotoMenuVisible(false)}
+      options={[
+        { label: "사진 변경", onPress: handlePickPhoto },
+        { label: "사진 삭제", onPress: () => setPhotoUrl(null), destructive: true },
+      ]}
+    />
     </View>
   );
 }
@@ -125,11 +150,8 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
-  photoPickerText: { color: colors.sub, fontWeight: "600" },
-  photoPreviewWrap: { gap: spacing.sm },
+  photoPickerText: { color: colors.violet, fontWeight: "600" },
   photoPreview: { width: "100%", aspectRatio: 1.4, borderRadius: radius.md },
-  removePhotoButton: { alignSelf: "flex-start" },
-  removePhotoText: { color: colors.danger, fontSize: 13, fontWeight: "600" },
   submitButton: { padding: 14, alignItems: "center", marginTop: 8 },
   submitButtonText: { color: "#fff", fontWeight: "700" },
 });
