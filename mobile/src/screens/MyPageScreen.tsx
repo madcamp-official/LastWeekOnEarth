@@ -22,6 +22,7 @@ import { EmailListEditor } from "../components/EmailListEditor";
 import { GradientView } from "../components/GradientView";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { ActionSheet } from "../components/ActionSheet";
 import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
@@ -81,6 +82,7 @@ export function MyPageScreen() {
     ]);
   };
   const [uploading, setUploading] = useState(false);
+  const [photoMenuVisible, setPhotoMenuVisible] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(user?.name ?? "");
@@ -96,6 +98,23 @@ export function MyPageScreen() {
     loadEmails();
   }, [loadEmails]);
 
+  const saveAvatar = async (avatarUrl: string | null) => {
+    setUploading(true);
+    try {
+      const updated = await usersApi.updateAvatar(avatarUrl);
+      updateUser({ avatarUrl: updated.avatarUrl });
+    } catch (err) {
+      console.warn("[MyPageScreen] avatar save failed:", err);
+      const message =
+        axios.isAxiosError(err) && err.response?.data?.error
+          ? err.response.data.error
+          : "프로필 사진을 저장하지 못했습니다.";
+      Alert.alert("업로드 실패", message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handlePickPhoto = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -103,25 +122,38 @@ export function MyPageScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.6,
-      base64: true,
-    });
-    if (result.canceled || !result.assets[0]?.base64) return;
-
-    const dataUrl = `data:image/jpeg;base64,${result.assets[0].base64}`;
-    setUploading(true);
+    let dataUrl: string;
     try {
-      const updated = await usersApi.updateAvatar(dataUrl);
-      updateUser({ avatarUrl: updated.avatarUrl });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.6,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      if (!asset?.base64) {
+        console.warn("[MyPageScreen] picker result missing base64:", JSON.stringify(result));
+        Alert.alert("사진을 불러오지 못했습니다.", "다른 사진으로 다시 시도해주세요.");
+        return;
+      }
+      dataUrl = `data:image/jpeg;base64,${asset.base64}`;
     } catch (err) {
-      Alert.alert("업로드 실패", "프로필 사진을 저장하지 못했습니다.");
-    } finally {
-      setUploading(false);
+      console.warn("[MyPageScreen] photo pick failed:", err);
+      Alert.alert("사진 선택 실패", err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+      return;
     }
+
+    await saveAvatar(dataUrl);
+  };
+
+  const handlePhotoPress = () => {
+    if (!user?.avatarUrl) {
+      handlePickPhoto();
+      return;
+    }
+    setPhotoMenuVisible(true);
   };
 
   const handleStartEdit = () => {
@@ -173,7 +205,7 @@ export function MyPageScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.pageTitle, { marginTop: insets.top + 12 }]}>마이페이지</Text>
 
-        <Pressable onPress={handlePickPhoto} disabled={uploading}>
+        <Pressable onPress={handlePhotoPress} disabled={uploading}>
           <GradientView style={styles.avatar} borderRadius={44}>
             {user?.avatarUrl ? (
               <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
@@ -252,6 +284,14 @@ export function MyPageScreen() {
         </View>
       </ScrollView>
       </KeyboardAvoidingScreen>
+      <ActionSheet
+        visible={photoMenuVisible}
+        onClose={() => setPhotoMenuVisible(false)}
+        options={[
+          { label: "사진 변경", onPress: handlePickPhoto },
+          { label: "사진 삭제", onPress: () => saveAvatar(null), destructive: true },
+        ]}
+      />
     </View>
   );
 }

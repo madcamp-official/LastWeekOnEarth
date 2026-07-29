@@ -36,6 +36,8 @@ PODS:
     - ExpoModulesCore
   - ExpoDevice (7.0.3):
     - ExpoModulesCore
+  - ExpoFileSystem (18.0.12):
+    - ExpoModulesCore
   - ExpoImagePicker (16.0.6):
     - ExpoModulesCore
   - ExpoLinking (7.0.5):
@@ -1771,6 +1773,7 @@ DEPENDENCIES:
   - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
   - ExpoCrypto (from `../node_modules/expo-crypto/ios`)
   - ExpoDevice (from `../node_modules/expo-device/ios`)
+  - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoImagePicker (from `../node_modules/expo-image-picker/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
@@ -1890,6 +1893,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-crypto/ios"
   ExpoDevice:
     :path: "../node_modules/expo-device/ios"
+  ExpoFileSystem:
+    :path: "../node_modules/expo-file-system/ios"
   ExpoImagePicker:
     :path: "../node_modules/expo-image-picker/ios"
   ExpoLinking:
@@ -2055,6 +2060,7 @@ SPEC CHECKSUMS:
   ExpoClipboard: 44fd1c8959ee8f6175d059dc011b154c9709a969
   ExpoCrypto: e97e864c8d7b9ce4a000bca45dddb93544a1b2b4
   ExpoDevice: d36ab4186b6799a28fd449bb9a1c77455f23fd1a
+  ExpoFileSystem: 42d363d3b96f9afab980dcef60d5657a4443c655
   ExpoImagePicker: 24e5ba8da111f74519b1e6dc556e0b438b2b8464
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
   ExpoModulesCore: 725faec070d590810d2ea5983d9f78f7cf6a38ec
