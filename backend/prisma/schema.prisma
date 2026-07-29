@@ -206,6 +206,8 @@ model Contact {
   photoUrl             String?
   contactMethod        String    @default("OTHER")
   source               String    @default("MANUAL")
+  // 인맥 목록 화면에서 사용자가 드래그로 직접 정한 순서. 낮을수록 위에 온다.
+  sortOrder            Int       @default(0)
   lastContactedAt      DateTime?
   // 이 기간(일)이 지나도록 연락이 없으면 푸시 알림으로 리마인드한다 (기본 90일 = 3개월).
   reminderIntervalDays Int       @default(90)

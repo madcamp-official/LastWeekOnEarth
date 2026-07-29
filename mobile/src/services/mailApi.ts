@@ -80,7 +80,7 @@ export const mailApi = {
 
   send: (id: string) =>
     api
-      .post<MailDraft & { gmailMessageId?: string; dmSent: boolean; dmSkippedReason?: string }>(`/mail-drafts/${id}/send`)
+      .post<MailDraft & { gmailMessageId?: string; dmSent?: boolean; dmSkippedReason?: string }>(`/mail-drafts/${id}/send`)
       .then((res) => res.data),
 
   schedule: (id: string, scheduledAt: Date) =>
