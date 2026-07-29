@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
+import { PlusIcon, SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -81,22 +82,25 @@ export function MailListScreen({ navigation }: Props) {
             <Text style={styles.settingsButtonText}>Gmail 연동</Text>
           </Pressable>
           <Pressable onPress={() => navigation.navigate("ComposeMail")}>
-            <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
-              <Text style={styles.addButtonText}>+</Text>
+            <SolidButtonView style={styles.iconButton} borderRadius={radius.md}>
+              <PlusIcon size={18} color="#fff" />
             </SolidButtonView>
           </Pressable>
         </View>
       </View>
 
-      <TextInput
-        style={styles.searchInput}
-        value={query}
-        onChangeText={setQuery}
-        placeholder="이름, 제목, 내용으로 초안 검색"
-        placeholderTextColor={colors.faint}
-        returnKeyType="search"
-        clearButtonMode="while-editing"
-      />
+      <View style={styles.searchBox}>
+        <SearchIcon size={15} color={colors.faint} />
+        <TextInput
+          style={styles.searchInput}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="이름, 제목, 내용으로 초안 검색"
+          placeholderTextColor={colors.faint}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+      </View>
 
       <FlatList
         horizontal
@@ -186,19 +190,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   settingsButtonText: { color: colors.sub, fontWeight: "600", fontSize: 12 },
-  addButton: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
-  addButtonText: { color: "#fff", fontWeight: "700", fontSize: 18 },
-  searchInput: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.sm,
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: colors.card,
-    color: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: spacing.sm,
+  },
+  searchInput: { flex: 1, height: "100%", color: colors.ink },
   chipsRow: { flexGrow: 0, marginBottom: spacing.sm },
   chipsContent: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.sm },

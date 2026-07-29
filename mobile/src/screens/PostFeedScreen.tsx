@@ -7,6 +7,7 @@ import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi, type Post, type PostComment } from "../services/postsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import { confirmAction, notify } from "../utils/confirm";
+import { PlusIcon } from "../components/Icon";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -117,8 +118,8 @@ export function PostFeedScreen({ navigation, route }: Props) {
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.title}>소식</Text>
         <Pressable onPress={() => navigation.navigate("CreatePost")}>
-          <SolidButtonView style={styles.addButton} borderRadius={radius.sm}>
-            <Text style={styles.addButtonText}>+ 소식 올리기</Text>
+          <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
+            <PlusIcon size={18} color="#fff" />
           </SolidButtonView>
         </Pressable>
       </View>
@@ -244,8 +245,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
-  addButton: { paddingHorizontal: 14, paddingVertical: 8 },
-  addButtonText: { color: "#fff", fontWeight: "600" },
+  addButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   tabRow: { flexDirection: "row", paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
   tabButton: { flex: 1 },
   tab: { width: "100%", height: 48, alignItems: "center", justifyContent: "center" },
