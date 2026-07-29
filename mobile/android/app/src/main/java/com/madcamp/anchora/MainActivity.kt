@@ -1,4 +1,4 @@
-package com.lastweekonearth.app
+package com.madcamp.anchora
 
 import android.os.Build
 import android.os.Bundle

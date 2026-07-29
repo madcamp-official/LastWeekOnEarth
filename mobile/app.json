@@ -20,7 +20,7 @@
     },
     "android": {
       "icon": "./assets/Anchora_icon.png",
-      "package": "com.lastweekonearth.app"
+      "package": "com.madcamp.anchora"
     },
     "web": {
       "bundler": "metro"

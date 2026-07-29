@@ -21,27 +21,6 @@ buildscript {
     }
 }
 
-// react-native-ble-advertiser가 자체 android/build.gradle에 compileSdkVersion 28을 하드코딩해둬서
-// (오래된 라이브러리), 최신 Android Gradle Plugin이 Java 9+ 컴파일에 요구하는 compileSdkVersion 30+과
-// 충돌한다. 이 android/ 폴더는 expo prebuild가 생성한 것이라 git에 안 잡히므로, prebuild를 다시 돌리면
-// 이 블록도 다시 추가해야 한다 (영구 고정하려면 config plugin으로 옮길 것).
-def forceSubprojectSdkVersions = { subproject ->
-    if (subproject.hasProperty("android")) {
-        subproject.android {
-            compileSdkVersion rootProject.ext.compileSdkVersion
-            buildToolsVersion rootProject.ext.buildToolsVersion
-        }
-    }
-}
-
-subprojects { subproject ->
-    if (subproject.state.executed) {
-        forceSubprojectSdkVersions(subproject)
-    } else {
-        subproject.afterEvaluate { forceSubprojectSdkVersions(subproject) }
-    }
-}
-
 apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
