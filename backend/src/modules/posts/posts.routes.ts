@@ -4,8 +4,9 @@ import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
-import { getNeighborUserIds } from "../../lib/socialFeed";
+import { getFollowerUserIds, getNeighborUserIds } from "../../lib/socialFeed";
 import { notifyUser } from "../../lib/notify";
+import { emitToUser } from "../../lib/socket";
 
 // 소식 탭: 진짜 소셜 피드. "내 소식"과 "이웃 소식"(계정이 연결된 인맥)으로 나뉜다.
 const router = Router();
@@ -82,6 +83,30 @@ router.post(
       include: { author: { select: AUTHOR_SELECT } },
     });
     res.status(201).json({ ...post, likeCount: 0, commentCount: 0, likedByMe: false });
+
+    // 응답은 먼저 보내고, 이웃들에게 새 소식 알림은 백그라운드로 보낸다 — 알림 발송 지연 때문에
+    // 글쓴이가 "게시 중..." 상태로 기다리게 하지 않기 위해서다. 응답을 이미 보낸 뒤라 여기서 에러가
+    // 나면 asyncHandler가 next(err)로 넘겨도 errorHandler가 res.headersSent를 안 가려서 그대로
+    // 다시 응답을 시도하다 죽는다 — 그래서 절대 밖으로 던지지 않고 이 안에서 끝낸다.
+    try {
+      const followerIds = await getFollowerUserIds(req.user!.userId);
+      const postForFeed = { ...post, likeCount: 0, commentCount: 0, likedByMe: false };
+      await Promise.all(
+        followerIds.map((followerId) => {
+          emitToUser(followerId, "post:new", postForFeed);
+          return notifyUser({
+            userId: followerId,
+            actorId: req.user!.userId,
+            postId: post.id,
+            type: "NEW_POST",
+            title: "새로운 소식",
+            body: `${post.author.name}님이 새 소식을 올렸어요.`,
+          });
+        }),
+      );
+    } catch (err) {
+      console.error("[posts] 새 소식 알림 발송 실패:", err);
+    }
   }),
 );
 
@@ -113,6 +138,19 @@ async function assertVisiblePost(postId: string, myUserId: string) {
   }
   return post;
 }
+
+router.get(
+  "/:id",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    await assertVisiblePost(req.params.id, req.user!.userId);
+    const post = await prisma.post.findUniqueOrThrow({
+      where: { id: req.params.id },
+      include: { author: { select: AUTHOR_SELECT } },
+    });
+    const [withCounts] = await attachSocialCounts([post], req.user!.userId);
+    res.json(withCounts);
+  }),
+);
 
 router.post(
   "/:id/like",

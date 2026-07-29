@@ -8,6 +8,7 @@ import { mailApi, type MailDraft } from "../services/mailApi";
 import { PlusIcon, SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "MailList">;
@@ -33,6 +34,7 @@ const STATUS_FILTERS: { key: "all" | MailDraft["status"]; label: string }[] = [
 
 export function MailListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [drafts, setDrafts] = useState<MailDraft[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
@@ -132,7 +134,7 @@ export function MailListScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {query.trim()

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,9 @@ import { useAuthStore } from "../store/useAuthStore";
 import { confirmAction, notify } from "../utils/confirm";
 import { PlusIcon, BellIcon, ChatIcon } from "../components/Icon";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useFocusedInterval } from "../hooks/useFocusedInterval";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
+import { getSocket } from "../services/socket";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "PostFeed">;
@@ -30,6 +33,7 @@ function formatRelativeTime(iso: string): string {
 
 export function PostFeedScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const myUserId = useAuthStore((s) => s.user?.id);
   const [tab, setTab] = useState<Tab>("MINE");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -54,10 +58,39 @@ export function PostFeedScreen({ navigation, route }: Props) {
     useCallback(() => {
       setTab(activeTab);
       load(activeTab);
-      notificationsApi.unreadCount().then(setUnreadCount);
-      messagesApi.unreadCount().then(setUnreadDmCount);
     }, [activeTab, load, route.params?.refreshKey]),
   );
+
+  // 소켓 안전망 폴링 — 평소엔 아래 소켓 리스너가 배지를 즉시 갱신한다.
+  useFocusedInterval(() => {
+    notificationsApi.unreadCount().then(setUnreadCount);
+    messagesApi.unreadCount().then(setUnreadDmCount);
+  }, 20000);
+
+  // 쪽지/알림 배지는 이벤트가 오는 즉시 다시 세고, 이웃 탭을 보는 중이면 새 소식도 바로 맨 위에 얹는다.
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const refreshDmBadge = () => messagesApi.unreadCount().then(setUnreadDmCount);
+    const refreshNotificationBadge = () => notificationsApi.unreadCount().then(setUnreadCount);
+    const handleNewPost = (post: Post) => {
+      refreshNotificationBadge();
+      setPosts((prev) => {
+        if (tab !== "NEIGHBORS" || prev.some((p) => p.id === post.id)) return prev;
+        return [post, ...prev];
+      });
+    };
+
+    socket.on("message:new", refreshDmBadge);
+    socket.on("notification:new", refreshNotificationBadge);
+    socket.on("post:new", handleNewPost);
+    return () => {
+      socket.off("message:new", refreshDmBadge);
+      socket.off("notification:new", refreshNotificationBadge);
+      socket.off("post:new", handleNewPost);
+    };
+  }, [tab]);
 
   const selectTab = (nextTab: Tab) => {
     navigation.setParams({ initialTab: undefined, refreshKey: undefined });
@@ -110,30 +143,30 @@ export function PostFeedScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>소식</Text>
-          <Pressable onPress={() => navigation.navigate("Conversations")} hitSlop={8} style={styles.bellButton}>
-            <ChatIcon size={21} color={colors.ink} />
+        <Text style={styles.title}>소식</Text>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.iconButton} onPress={() => navigation.navigate("Conversations")} hitSlop={8}>
+            <ChatIcon size={18} color={colors.sub} />
             {unreadDmCount > 0 && (
               <View style={styles.bellBadge}>
                 <Text style={styles.bellBadgeText}>{unreadDmCount > 9 ? "9+" : unreadDmCount}</Text>
               </View>
             )}
           </Pressable>
-          <Pressable onPress={() => navigation.navigate("Notifications")} hitSlop={8} style={styles.bellButton}>
-            <BellIcon size={22} color={colors.ink} />
+          <Pressable style={styles.iconButton} onPress={() => navigation.navigate("Notifications")} hitSlop={8}>
+            <BellIcon size={18} color={colors.sub} />
             {unreadCount > 0 && (
               <View style={styles.bellBadge}>
                 <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
               </View>
             )}
           </Pressable>
+          <Pressable onPress={() => navigation.navigate("CreatePost")}>
+            <SolidButtonView style={styles.iconButton} borderRadius={radius.md}>
+              <PlusIcon size={18} color="#fff" />
+            </SolidButtonView>
+          </Pressable>
         </View>
-        <Pressable onPress={() => navigation.navigate("CreatePost")}>
-          <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
-            <PlusIcon size={18} color="#fff" />
-          </SolidButtonView>
-        </Pressable>
       </View>
 
       <View style={styles.tabRow}>
@@ -166,7 +199,7 @@ export function PostFeedScreen({ navigation, route }: Props) {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={() => load(activeTab)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {activeTab === "MINE"
@@ -254,13 +287,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
-  bellButton: { padding: 4 },
+  headerActions: { flexDirection: "row", gap: spacing.sm },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   bellBadge: {
     position: "absolute",
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -2,
     backgroundColor: colors.pink,
     borderRadius: radius.pill,
     minWidth: 16,
@@ -270,15 +312,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   bellBadgeText: { color: "#fff", fontSize: 9, fontWeight: "700" },
-  addButton: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   tabRow: { flexDirection: "row", paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
   tabButton: { flex: 1 },
   tab: { width: "100%", height: 48, alignItems: "center", justifyContent: "center" },

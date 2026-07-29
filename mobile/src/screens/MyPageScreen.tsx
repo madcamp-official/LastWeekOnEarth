@@ -23,6 +23,7 @@ import { GradientView } from "../components/GradientView";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { ActionSheet } from "../components/ActionSheet";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 const PHONE_REGEX = /^\d{2,3}-\d{3,4}-\d{4}$/;
@@ -33,6 +34,7 @@ const GoogleSignin = GoogleSigninModule?.GoogleSignin;
 
 export function MyPageScreen() {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
   const setSession = useAuthStore((s) => s.setSession);
@@ -219,7 +221,7 @@ export function MyPageScreen() {
   return (
     <View style={styles.container}>
       <KeyboardAvoidingScreen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight }]}>
         <Text style={[styles.pageTitle, { marginTop: insets.top + 12 }]}>마이페이지</Text>
 
         <Pressable onPress={handlePhotoPress} disabled={uploading}>

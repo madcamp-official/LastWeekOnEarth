@@ -10,6 +10,7 @@ import { BackButton } from "../components/BackButton";
 import { CheckIcon } from "../components/Icon";
 import { GradientView } from "../components/GradientView";
 import { notify } from "../utils/confirm";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "IncomingContacts">;
@@ -28,6 +29,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 // 내가 아직 등록하지 않은 사람만 모아 보여주고 골라서 등록할 수 있게 한다.
 export function IncomingContactsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [users, setUsers] = useState<IncomingUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [addingIds, setAddingIds] = useState<Set<string>>(new Set());
@@ -78,7 +80,7 @@ export function IncomingContactsScreen({ navigation }: Props) {
       <FlatList
         data={users}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         refreshing={loading}
         onRefresh={load}
         ListEmptyComponent={

@@ -14,6 +14,7 @@ export interface Contact {
   photoUrl: string | null;
   contactMethod: ContactMethod;
   source: ContactSource;
+  targetUserId: string | null;
   lastContactedAt: string | null;
   createdAt: string;
 }

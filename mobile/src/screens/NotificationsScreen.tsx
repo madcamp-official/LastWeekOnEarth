@@ -1,11 +1,13 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { notificationsApi, type AppNotification } from "../services/notificationsApi";
 import { BackButton } from "../components/BackButton";
+import { useFocusedInterval } from "../hooks/useFocusedInterval";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
+import { getSocket } from "../services/socket";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "Notifications">;
@@ -28,6 +30,8 @@ function describe(n: AppNotification): string {
       return `${n.actor?.name ?? "누군가"}님이 회원님의 소식을 좋아합니다.`;
     case "DM_MESSAGE":
       return `${n.actor?.name ?? "누군가"}님이 쪽지를 보냈습니다.`;
+    case "NEW_POST":
+      return `${n.actor?.name ?? "누군가"}님이 새 소식을 올렸어요.`;
     case "CONTACT_REMINDER":
       return `${n.contact?.name ?? "인맥"}님에게 연락한 지 오래됐어요.`;
     default:
@@ -37,6 +41,7 @@ function describe(n: AppNotification): string {
 
 export function NotificationsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [items, setItems] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -49,11 +54,20 @@ export function NotificationsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  // 소켓 안전망 폴링 — 새 알림은 아래 소켓 리스너로 즉시 목록 맨 위에 추가된다.
+  useFocusedInterval(load, 20000);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    const handleNewNotification = (n: AppNotification) => {
+      setItems((prev) => (prev.some((it) => it.id === n.id) ? prev : [n, ...prev]));
+    };
+    socket.on("notification:new", handleNewNotification);
+    return () => {
+      socket.off("notification:new", handleNewNotification);
+    };
+  }, []);
 
   const handlePress = async (n: AppNotification) => {
     if (!n.read) {
@@ -62,6 +76,8 @@ export function NotificationsScreen({ navigation }: Props) {
     }
     if (n.type === "POST_LIKE" && n.postId) {
       navigation.navigate("PostLikes", { postId: n.postId });
+    } else if (n.type === "NEW_POST" && n.postId) {
+      navigation.navigate("PostDetail", { postId: n.postId });
     } else if (n.type === "DM_MESSAGE" && n.actor) {
       navigation.navigate("ChatThread", { userId: n.actor.id, userName: n.actor.name });
     }
@@ -91,7 +107,7 @@ export function NotificationsScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         refreshing={loading}
         onRefresh={load}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={<Text style={styles.empty}>{loading ? "" : "아직 알림이 없습니다."}</Text>}
         renderItem={({ item }) => (
           <Pressable style={[styles.row, !item.read && styles.rowUnread]} onPress={() => handlePress(item)}>
@@ -113,11 +129,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    padding: spacing.lg,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  title: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   markAll: { color: colors.violet, fontWeight: "700", fontSize: 13 },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.sm },
   row: {

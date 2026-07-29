@@ -13,7 +13,7 @@ export function MailStackNavigator() {
     <Stack.Navigator initialRouteName="MailList">
       <Stack.Screen name="MailList" component={MailListScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ComposeMail" component={ComposeMailScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="MailDraftDetail" component={MailDraftDetailScreen} options={{ title: "초안" }} />
+      <Stack.Screen name="MailDraftDetail" component={MailDraftDetailScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GmailSettings" component={GmailSettingsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

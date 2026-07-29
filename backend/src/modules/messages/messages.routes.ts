@@ -4,8 +4,9 @@ import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
-import { getNeighborUserIds } from "../../lib/socialFeed";
+import { findOwnedContactForUser, getNeighborUserIds } from "../../lib/socialFeed";
 import { notifyUser } from "../../lib/notify";
+import { emitToUser } from "../../lib/socket";
 
 // 소식의 "답장"은 댓글이 아니라 작성자에게 보내는 1:1 디엠이 된다. 아무나와 디엠할 수 있는 게
 // 아니라 소식 피드와 같은 기준(이웃 관계, 어느 한쪽이라도 상대를 인맥으로 등록했으면 허용)으로 제한한다.
@@ -185,6 +186,10 @@ router.post(
       include: MESSAGE_INCLUDE,
     });
 
+    // 알림(notification:new)과 별개로, 대화창을 이미 열어둔 상대 화면에 메시지 자체를 즉시 밀어준다
+    // — 알림 배지 갱신만으로는 채팅 화면 안의 말풍선 목록까지 바로 업데이트되진 않기 때문.
+    emitToUser(otherUserId, "message:new", message);
+
     const sender = await prisma.user.findUnique({ where: { id: myUserId }, select: { name: true } });
     const bodyPreview = photoUrl
       ? "사진을 보냈습니다."
@@ -200,6 +205,19 @@ router.post(
       title: "새로운 쪽지",
       body: `${sender?.name ?? "누군가"}님이 ${bodyPreview}`,
     });
+
+    // 상대를 내 인맥으로 등록해뒀으면, 쪽지 발송도 메일 발송과 마찬가지로 "연락했음"과
+    // 동일하게 자동으로 연락 이력을 남기고 리마인더 기준일(lastContactedAt)을 갱신한다.
+    const contact = await findOwnedContactForUser(myUserId, otherUserId);
+    if (contact) {
+      const contactedAt = new Date();
+      await prisma.$transaction([
+        prisma.contactLog.create({
+          data: { contactId: contact.id, channel: "OTHER", memo: "쪽지 발송", contactedAt },
+        }),
+        prisma.contact.update({ where: { id: contact.id }, data: { lastContactedAt: contactedAt } }),
+      ]);
+    }
 
     res.status(201).json(message);
   }),

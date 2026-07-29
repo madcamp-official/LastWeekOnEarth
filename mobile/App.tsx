@@ -1,11 +1,13 @@
 import React, { useEffect } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import LoginScreen from "./src/screens/LoginScreen";
 import ProfileSetupScreen from "./src/screens/ProfileSetupScreen";
 import { useAuthStore } from "./src/store/useAuthStore";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 import { registerForPushNotifications } from "./src/services/pushNotifications";
+import { connectSocket, disconnectSocket } from "./src/services/socket";
 import { colors } from "./src/theme/colors";
 
 function AppContent() {
@@ -16,6 +18,13 @@ function AppContent() {
     if (user) {
       void registerForPushNotifications();
     }
+  }, [user]);
+
+  // 로그인 상태인 동안만 소켓을 열어둔다 — 쪽지/알림/소식이 폴링 없이 즉시 화면에 반영된다.
+  useEffect(() => {
+    if (!user) return;
+    connectSocket();
+    return () => disconnectSocket();
   }, [user]);
 
   // SecureStore/localStorage에서 저장된 세션을 비동기로 읽어오는 짧은 순간 — 로그인 화면이
@@ -39,7 +48,9 @@ export default function App() {
   if (Platform.OS !== "web") {
     return (
       <SafeAreaProvider>
-        <AppContent />
+        <KeyboardProvider>
+          <AppContent />
+        </KeyboardProvider>
       </SafeAreaProvider>
     );
   }
