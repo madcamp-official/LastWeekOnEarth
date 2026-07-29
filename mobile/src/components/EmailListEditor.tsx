@@ -45,6 +45,7 @@ export function EmailListEditor({ emails, onAdd, onUpdate, onSetPrimary, onRemov
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingEmail, setEditingEmail] = useState("");
+  const isValidEmail = EMAIL_REGEX.test(newEmail.trim());
 
   const handleAdd = async () => {
     const email = newEmail.trim();

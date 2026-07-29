@@ -87,13 +87,30 @@ export function MyPageScreen() {
   const [affiliation, setAffiliation] = useState(user?.affiliation ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [emails, setEmails] = useState<UserEmail[]>([]);
+  const [loadingEmails, setLoadingEmails] = useState(true);
+  const [emailLoadError, setEmailLoadError] = useState<string | null>(null);
 
   const loadEmails = useCallback(async () => {
-    setEmails(await usersApi.listEmails());
+    setLoadingEmails(true);
+    try {
+      setEmails(await usersApi.listEmails());
+      setEmailLoadError(null);
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === "string"
+          ? err.response.data.error
+          : "이메일 목록을 불러오지 못했습니다.";
+      setEmailLoadError(message);
+      throw err;
+    } finally {
+      setLoadingEmails(false);
+    }
   }, []);
 
   useEffect(() => {
-    loadEmails();
+    void loadEmails().catch(() => {
+      // 오류는 화면 안에서 안내한다. 처리되지 않은 Promise로 앱이 중단되지 않게 한다.
+    });
   }, [loadEmails]);
 
   const handlePickPhoto = async () => {
@@ -233,22 +250,38 @@ export function MyPageScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>이메일</Text>
-          <EmailListEditor
-            emails={emails}
-            onAdd={async (email) => {
-              await usersApi.addEmail(email);
-              await loadEmails();
-            }}
-            onSetPrimary={async (id) => {
-              const updated = await usersApi.setPrimaryEmail(id);
-              updateUser(updated);
-              await loadEmails();
-            }}
-            onRemove={async (id) => {
-              await usersApi.removeEmail(id);
-              await loadEmails();
-            }}
-          />
+          {loadingEmails && emails.length === 0 ? (
+            <ActivityIndicator color={colors.blue} />
+          ) : emailLoadError && emails.length === 0 ? (
+            <View style={styles.emailLoadError}>
+              <Text style={styles.emailLoadErrorText}>{emailLoadError}</Text>
+              <Pressable
+                style={styles.retryButton}
+                onPress={() => {
+                  void loadEmails().catch(() => {});
+                }}
+              >
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <EmailListEditor
+              emails={emails}
+              onAdd={async (email) => {
+                await usersApi.addEmail(email);
+                await loadEmails();
+              }}
+              onSetPrimary={async (id) => {
+                const updated = await usersApi.setPrimaryEmail(id);
+                updateUser(updated);
+                await loadEmails();
+              }}
+              onRemove={async (id) => {
+                await usersApi.removeEmail(id);
+                await loadEmails();
+              }}
+            />
+          )}
         </View>
       </ScrollView>
       </KeyboardAvoidingScreen>
@@ -324,4 +357,15 @@ const styles = StyleSheet.create({
   saveButtonText: { color: "#fff", fontWeight: "600" },
   section: { width: "100%", marginTop: 32 },
   sectionTitle: { fontSize: 14, fontWeight: "700", color: colors.ink, marginBottom: 8 },
+  emailLoadError: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
+  emailLoadErrorText: { color: colors.danger, textAlign: "center" },
+  retryButton: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    backgroundColor: colors.card,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  retryButtonText: { color: colors.ink, fontWeight: "600" },
 });
