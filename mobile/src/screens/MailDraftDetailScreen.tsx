@@ -136,15 +136,26 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   };
 
   const handleSendNow = () => {
+    const isEmail = draft?.channel === "EMAIL";
     confirmAction(
-      "지금 이 이메일을 발송할까요?",
+      isEmail ? "지금 이 이메일을 발송할까요?" : "지금 쪽지로 발송할까요?",
       async () => {
         setSending(true);
         try {
           await saveIfDirty();
           const result = await mailApi.send(draftId);
           setDraft(result);
-          notify("발송 완료", "메일이 발송되었습니다.");
+          if (isEmail) {
+            if (result.dmSent) {
+              notify("발송 완료", "메일이 발송되었고, 쪽지로도 전달했어요.");
+            } else if (result.dmSkippedReason) {
+              notify("발송 완료", `메일이 발송되었습니다.\n${result.dmSkippedReason}`);
+            } else {
+              notify("발송 완료", "메일이 발송되었습니다.");
+            }
+          } else {
+            notify("발송 완료", "쪽지로 전달했어요.");
+          }
         } catch (err) {
           const message = extractErrorMessage(err);
           if (message.includes("Gmail 발송 권한")) {
@@ -183,7 +194,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   };
 
   useEffect(() => {
-    if (!draft || draft.channel !== "EMAIL") {
+    if (!draft) {
       navigation.setOptions({ headerRight: undefined });
       return;
     }

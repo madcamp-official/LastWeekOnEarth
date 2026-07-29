@@ -9,12 +9,15 @@ const router = Router();
 
 router.use(requireAuth);
 
+const ACTOR_SELECT = { id: true, name: true, avatarUrl: true } as const;
+
 router.get(
   "/",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const notifications = await prisma.notification.findMany({
       where: { userId: req.user!.userId },
       orderBy: { createdAt: "desc" },
+      include: { actor: { select: ACTOR_SELECT } },
     });
 
     const contactIds = [...new Set(notifications.map((n) => n.contactId).filter((id): id is string => !!id))];
@@ -29,6 +32,22 @@ router.get(
         contact: n.contactId ? contactById.get(n.contactId) ?? null : null,
       })),
     );
+  }),
+);
+
+router.get(
+  "/unread-count",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const count = await prisma.notification.count({ where: { userId: req.user!.userId, read: false } });
+    res.json({ count });
+  }),
+);
+
+router.patch(
+  "/read-all",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    await prisma.notification.updateMany({ where: { userId: req.user!.userId, read: false }, data: { read: true } });
+    res.status(204).send();
   }),
 );
 

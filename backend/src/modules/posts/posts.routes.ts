@@ -5,6 +5,7 @@ import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
 import { getNeighborUserIds } from "../../lib/socialFeed";
+import { notifyUser } from "../../lib/notify";
 
 // 소식 탭: 진짜 소셜 피드. "내 소식"과 "이웃 소식"(계정이 연결된 인맥)으로 나뉜다.
 const router = Router();
@@ -116,14 +117,39 @@ async function assertVisiblePost(postId: string, myUserId: string) {
 router.post(
   "/:id/like",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    await assertVisiblePost(req.params.id, req.user!.userId);
+    const post = await assertVisiblePost(req.params.id, req.user!.userId);
     await prisma.postLike.upsert({
       where: { postId_userId: { postId: req.params.id, userId: req.user!.userId } },
       update: {},
       create: { postId: req.params.id, userId: req.user!.userId },
     });
     const likeCount = await prisma.postLike.count({ where: { postId: req.params.id } });
+
+    const liker = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { name: true } });
+    await notifyUser({
+      userId: post.authorId,
+      actorId: req.user!.userId,
+      postId: post.id,
+      type: "POST_LIKE",
+      title: "새로운 좋아요",
+      body: `${liker?.name ?? "누군가"}님이 회원님의 소식을 좋아합니다.`,
+    });
+
     res.status(201).json({ likedByMe: true, likeCount });
+  }),
+);
+
+// 이 소식에 좋아요를 누른 사람 목록 (최신순).
+router.get(
+  "/:id/likes",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    await assertVisiblePost(req.params.id, req.user!.userId);
+    const likes = await prisma.postLike.findMany({
+      where: { postId: req.params.id },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: AUTHOR_SELECT } },
+    });
+    res.json(likes.map((l) => ({ ...l.user, likedAt: l.createdAt })));
   }),
 );
 

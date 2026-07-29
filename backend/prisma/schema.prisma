@@ -48,6 +48,10 @@ model User {
   postLikes          PostLike[]
   postComments       PostComment[]
   gmailAuthorization GmailAuthorization?
+  sentMessages       Message[]           @relation("MessageSender")
+  receivedMessages   Message[]           @relation("MessageReceiver")
+  sharedInMessages   Message[]           @relation("MessageSharedProfile")
+  notificationsCaused Notification[]     @relation("NotificationActor")
 }
 
 // 사용자가 "내 대신 Gmail 발송" 권한을 부여한 상태 저장 (OAuth offline access refresh token).
@@ -73,8 +77,10 @@ model Post {
   photoUrl  String?
   createdAt DateTime @default(now())
 
-  likes    PostLike[]
-  comments PostComment[]
+  likes         PostLike[]
+  comments      PostComment[]
+  messages      Message[]
+  notifications Notification[]
 
   @@index([authorId])
   @@index([createdAt])
@@ -102,6 +108,35 @@ model PostComment {
   createdAt DateTime @default(now())
 
   @@index([postId])
+}
+
+// 소식 "답장"은 댓글이 아니라 작성자에게 보내는 1:1 디엠이 된다 (postId는 어떤 소식에서
+// 시작된 대화인지 참고용으로만 남기고, 스레드 자체는 sender/receiver 쌍으로 식별한다).
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  // 텍스트/사진/프로필 공유 중 최소 하나는 채워진다 (zod에서 검증). content는 사진/프로필만
+  // 보낼 때는 빈 문자열일 수 있다.
+  content    String   @default("")
+  photoUrl   String?
+  sharedProfileId String?
+  sharedProfile   User? @relation("MessageSharedProfile", fields: [sharedProfileId], references: [id], onDelete: SetNull)
+  // 계정 없이 수동 등록만 된 주소록 인맥도 공유할 수 있도록 User가 아닌 Contact를 직접 참조한다.
+  sharedContactId String?
+  sharedContact   Contact? @relation(fields: [sharedContactId], references: [id], onDelete: SetNull)
+  postId     String?
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  notifications Notification[]
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
 }
 
 // 사용자가 등록한 여러 이메일 (구글 로그인 계정 외 학교 도메인 이메일 등). isPrimary인 값은
@@ -181,6 +216,7 @@ model Contact {
   logs             ContactLog[]
   mailDrafts       EmailDraft[]
   emails           ContactEmail[]
+  sharedInMessages Message[]
 
   @@index([ownerUserId])
   @@index([targetUserId])
@@ -288,7 +324,7 @@ model EmailDraft {
   @@index([batchId])
 }
 
-// NotificationType: "CONTACT_REMINDER"
+// NotificationType: "CONTACT_REMINDER" | "POST_LIKE" | "DM_MESSAGE"
 model Notification {
   id          String        @id @default(uuid())
   userId      String
@@ -296,6 +332,13 @@ model Notification {
   contactId   String?
   groupId     String?
   group       ContactGroup? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  // 알림을 유발한 상대방 (좋아요 누른 사람, 디엠 보낸 사람 등). CONTACT_REMINDER는 null.
+  actorId     String?
+  actor       User?         @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  postId      String?
+  post        Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  messageId   String?
+  message     Message?      @relation(fields: [messageId], references: [id], onDelete: Cascade)
   type        String
   scheduledAt DateTime
   sent        Boolean       @default(false)
@@ -305,4 +348,7 @@ model Notification {
   @@index([userId])
   @@index([groupId])
   @@index([scheduledAt, sent])
+  @@index([actorId])
+  @@index([postId])
+  @@index([messageId])
 }

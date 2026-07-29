@@ -8,6 +8,7 @@ import mailRoutes from "../modules/mail/mail.routes";
 import gmailAuthRoutes from "../modules/mail/gmailAuth.routes";
 import notificationsRoutes from "../modules/notifications/notifications.routes";
 import postsRoutes from "../modules/posts/posts.routes";
+import messagesRoutes from "../modules/messages/messages.routes";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/mail-drafts", mailRoutes);
 router.use("/mail/gmail", gmailAuthRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/posts", postsRoutes);
+router.use("/messages", messagesRoutes);
 
 export default router;

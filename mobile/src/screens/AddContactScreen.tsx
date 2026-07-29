@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -9,6 +10,7 @@ import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
+import { notify } from "../utils/confirm";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AddContact">;
 
@@ -83,7 +85,11 @@ export function AddContactScreen({ navigation }: Props) {
       });
       navigation.goBack();
     } catch (err) {
-      Alert.alert("등록 실패", err instanceof Error ? err.message : "알 수 없는 오류");
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === "string"
+          ? err.response.data.error
+          : "인맥을 등록하지 못했습니다.";
+      notify("등록 실패", message);
     } finally {
       setSubmitting(false);
     }

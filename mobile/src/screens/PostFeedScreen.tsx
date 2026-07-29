@@ -4,10 +4,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
-import { postsApi, type Post, type PostComment } from "../services/postsApi";
+import { postsApi, type Post } from "../services/postsApi";
+import { messagesApi } from "../services/messagesApi";
+import { notificationsApi } from "../services/notificationsApi";
 import { useAuthStore } from "../store/useAuthStore";
 import { confirmAction, notify } from "../utils/confirm";
-import { PlusIcon } from "../components/Icon";
+import { PlusIcon, BellIcon, ChatIcon } from "../components/Icon";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
 
@@ -32,9 +34,11 @@ export function PostFeedScreen({ navigation, route }: Props) {
   const [tab, setTab] = useState<Tab>("MINE");
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
-  const [commentsByPost, setCommentsByPost] = useState<Record<string, PostComment[]>>({});
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [replyingPostId, setReplyingPostId] = useState<string | null>(null);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [sendingReply, setSendingReply] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadDmCount, setUnreadDmCount] = useState(0);
   const activeTab = route.params?.initialTab ?? tab;
 
   const load = useCallback(async (target: Tab) => {
@@ -50,6 +54,8 @@ export function PostFeedScreen({ navigation, route }: Props) {
     useCallback(() => {
       setTab(activeTab);
       load(activeTab);
+      notificationsApi.unreadCount().then(setUnreadCount);
+      messagesApi.unreadCount().then(setUnreadDmCount);
     }, [activeTab, load, route.params?.refreshKey]),
   );
 
@@ -81,42 +87,48 @@ export function PostFeedScreen({ navigation, route }: Props) {
     }
   };
 
-  const toggleComments = async (postId: string) => {
-    if (expandedPostId === postId) {
-      setExpandedPostId(null);
-      return;
-    }
-    setExpandedPostId(postId);
-    if (!commentsByPost[postId]) {
-      const comments = await postsApi.listComments(postId);
-      setCommentsByPost((prev) => ({ ...prev, [postId]: comments }));
-    }
+  const toggleReply = (postId: string) => {
+    setReplyingPostId((prev) => (prev === postId ? null : postId));
   };
 
-  const submitComment = async (post: Post) => {
-    const content = (commentDrafts[post.id] ?? "").trim();
-    if (!content) return;
-    const comment = await postsApi.addComment(post.id, content);
-    setCommentsByPost((prev) => ({ ...prev, [post.id]: [...(prev[post.id] ?? []), comment] }));
-    setCommentDrafts((prev) => ({ ...prev, [post.id]: "" }));
-    setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, commentCount: p.commentCount + 1 } : p)));
-  };
-
-  const handleDeleteComment = (post: Post, comment: PostComment) => {
-    confirmAction("이 댓글을 삭제하시겠습니까?", async () => {
-      await postsApi.removeComment(post.id, comment.id);
-      setCommentsByPost((prev) => ({
-        ...prev,
-        [post.id]: (prev[post.id] ?? []).filter((c) => c.id !== comment.id),
-      }));
-      setPosts((prev) => prev.map((p) => (p.id === post.id ? { ...p, commentCount: Math.max(0, p.commentCount - 1) } : p)));
-    });
+  const submitReply = async (post: Post) => {
+    const content = (replyDrafts[post.id] ?? "").trim();
+    if (!content || sendingReply) return;
+    setSendingReply(true);
+    try {
+      await messagesApi.send(post.authorId, { content, postId: post.id });
+      setReplyDrafts((prev) => ({ ...prev, [post.id]: "" }));
+      setReplyingPostId(null);
+      navigation.navigate("ChatThread", { userId: post.authorId, userName: post.author.name });
+    } catch {
+      notify("전송 실패", "잠시 후 다시 시도해주세요.");
+    } finally {
+      setSendingReply(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.title}>소식</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>소식</Text>
+          <Pressable onPress={() => navigation.navigate("Conversations")} hitSlop={8} style={styles.bellButton}>
+            <ChatIcon size={21} color={colors.ink} />
+            {unreadDmCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadDmCount > 9 ? "9+" : unreadDmCount}</Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("Notifications")} hitSlop={8} style={styles.bellButton}>
+            <BellIcon size={22} color={colors.ink} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
         <Pressable onPress={() => navigation.navigate("CreatePost")}>
           <SolidButtonView style={styles.addButton} borderRadius={radius.md}>
             <PlusIcon size={18} color="#fff" />
@@ -192,38 +204,36 @@ export function PostFeedScreen({ navigation, route }: Props) {
             <View style={styles.socialRow}>
               <Pressable style={styles.socialButton} onPress={() => toggleLike(item)} hitSlop={8}>
                 <Text style={[styles.socialButtonText, item.likedByMe && styles.likedText]}>
-                  {item.likedByMe ? "♥" : "♡"} {item.likeCount}
+                  {item.likedByMe ? "♥" : "♡"}
                 </Text>
               </Pressable>
-              <Pressable style={styles.socialButton} onPress={() => toggleComments(item.id)} hitSlop={8}>
-                <Text style={styles.socialButtonText}>댓글 {item.commentCount}</Text>
+              <Pressable
+                onPress={() => item.likeCount > 0 && navigation.navigate("PostLikes", { postId: item.id })}
+                hitSlop={8}
+                disabled={item.likeCount === 0}
+              >
+                <Text style={styles.socialButtonText}>좋아요 {item.likeCount}</Text>
               </Pressable>
+              {item.authorId !== myUserId && (
+                <Pressable style={styles.socialButton} onPress={() => toggleReply(item.id)} hitSlop={8}>
+                  <Text style={styles.socialButtonText}>답장</Text>
+                </Pressable>
+              )}
             </View>
 
-            {expandedPostId === item.id && (
+            {replyingPostId === item.id && (
               <View style={styles.commentsBox}>
-                {(commentsByPost[item.id] ?? []).map((comment) => (
-                  <View key={comment.id} style={styles.commentRow}>
-                    <Text style={styles.commentAuthor}>{comment.author.name}</Text>
-                    <Text style={styles.commentContent}>{comment.content}</Text>
-                    {comment.authorId === myUserId && (
-                      <Pressable onPress={() => handleDeleteComment(item, comment)} hitSlop={8}>
-                        <Text style={styles.commentDelete}>삭제</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                ))}
                 <View style={styles.commentInputRow}>
                   <TextInput
                     style={styles.commentInput}
-                    placeholder="댓글 달기..."
+                    placeholder={`${item.author.name}님에게 쪽지 보내기...`}
                     placeholderTextColor={colors.faint}
-                    value={commentDrafts[item.id] ?? ""}
-                    onChangeText={(text) => setCommentDrafts((prev) => ({ ...prev, [item.id]: text }))}
-                    onSubmitEditing={() => submitComment(item)}
+                    value={replyDrafts[item.id] ?? ""}
+                    onChangeText={(text) => setReplyDrafts((prev) => ({ ...prev, [item.id]: text }))}
+                    onSubmitEditing={() => submitReply(item)}
                   />
-                  <Pressable onPress={() => submitComment(item)} hitSlop={8}>
-                    <Text style={styles.commentSubmit}>등록</Text>
+                  <Pressable onPress={() => submitReply(item)} hitSlop={8} disabled={sendingReply}>
+                    <Text style={styles.commentSubmit}>보내기</Text>
                   </Pressable>
                 </View>
               </View>
@@ -244,7 +254,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
   },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   title: { fontSize: 26, fontWeight: "800", color: colors.ink },
+  bellButton: { padding: 4 },
+  bellBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: colors.pink,
+    borderRadius: radius.pill,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: { color: "#fff", fontSize: 9, fontWeight: "700" },
   addButton: {
     width: 38,
     height: 38,

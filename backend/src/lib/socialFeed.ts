@@ -32,3 +32,18 @@ export async function getNeighborUserIds(myUserId: string): Promise<string[]> {
 
   return Array.from(new Set([...directIds, ...matchedByEmail]));
 }
+
+/**
+ * 인맥 한 명이 실제로 어떤 계정에 연결되는지 판별한다 (targetUserId 직접 연결 또는 이메일 일치).
+ * 메일함에서 쪽지 자동 전송처럼 "이 인맥이 계정을 가진 사람인가"를 개별로 확인할 때 쓴다.
+ */
+export async function resolveContactUserId(contact: { targetUserId: string | null; email: string | null }): Promise<string | null> {
+  if (contact.targetUserId) return contact.targetUserId;
+  if (!contact.email) return null;
+
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ email: contact.email }, { emails: { some: { email: contact.email } } }] },
+    select: { id: true },
+  });
+  return user?.id ?? null;
+}

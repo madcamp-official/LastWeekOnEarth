@@ -19,6 +19,10 @@ export interface Post {
   likedByMe: boolean;
 }
 
+export interface PostLiker extends PostAuthor {
+  likedAt: string;
+}
+
 export interface PostComment {
   id: string;
   postId: string;
@@ -45,6 +49,8 @@ export const postsApi = {
   like: (id: string) => api.post<{ likedByMe: boolean; likeCount: number }>(`/posts/${id}/like`).then((res) => res.data),
 
   unlike: (id: string) => api.delete<{ likedByMe: boolean; likeCount: number }>(`/posts/${id}/like`).then((res) => res.data),
+
+  listLikes: (id: string) => api.get<PostLiker[]>(`/posts/${id}/likes`).then((res) => res.data),
 
   listComments: (id: string) => api.get<PostComment[]>(`/posts/${id}/comments`).then((res) => res.data),
 

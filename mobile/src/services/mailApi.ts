@@ -78,7 +78,10 @@ export const mailApi = {
 
   remove: (id: string) => api.delete(`/mail-drafts/${id}`),
 
-  send: (id: string) => api.post<MailDraft & { gmailMessageId: string }>(`/mail-drafts/${id}/send`).then((res) => res.data),
+  send: (id: string) =>
+    api
+      .post<MailDraft & { gmailMessageId?: string; dmSent: boolean; dmSkippedReason?: string }>(`/mail-drafts/${id}/send`)
+      .then((res) => res.data),
 
   schedule: (id: string, scheduledAt: Date) =>
     api

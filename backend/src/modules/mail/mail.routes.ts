@@ -5,7 +5,7 @@ import { asyncHandler } from "../../lib/asyncHandler";
 import { requireAuth, type AuthenticatedRequest } from "../../middleware/auth.middleware";
 import { HttpError } from "../../middleware/error.middleware";
 import { generateContactDraft } from "../../lib/gemini";
-import { sendEmailDraft } from "../../lib/sendMailDraft";
+import { sendEmailDraft, sendTextDraft } from "../../lib/sendMailDraft";
 
 // CLAUDE.md 섹션 5 (AI 메일/문자 초안 생성)
 const router = Router();
@@ -261,17 +261,26 @@ router.delete(
   }),
 );
 
-// draft 채널이 EMAIL이고 대상(연락처)에 이메일이 있어야 즉시 발송 가능.
 // 그룹 SHARED 초안은 받는 사람이 여러 명이라 여기선 단일 연락처 초안만 지원한다.
+// EMAIL 채널은 Gmail로 실제 발송하고, TEXT 채널은 실제 SMS 연동이 없어 쪽지(디엠)로 대신 보낸다.
 router.post(
   "/:id/send",
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const messageId = await sendEmailDraft(req.params.id, req.user!.userId);
-    const updated = await prisma.emailDraft.findUniqueOrThrow({
-      where: { id: req.params.id },
-      include: draftRelations,
-    });
-    res.json({ ...updated, gmailMessageId: messageId });
+    const draft = await prisma.emailDraft.findFirst({ where: { id: req.params.id, ownerUserId: req.user!.userId } });
+    if (!draft) {
+      throw new HttpError(404, "초안을 찾을 수 없습니다.");
+    }
+
+    if (draft.channel === "EMAIL") {
+      const result = await sendEmailDraft(req.params.id, req.user!.userId);
+      const updated = await prisma.emailDraft.findUniqueOrThrow({ where: { id: req.params.id }, include: draftRelations });
+      res.json({ ...updated, gmailMessageId: result.messageId, dmSent: result.dmSent, dmSkippedReason: result.dmSkippedReason });
+      return;
+    }
+
+    const result = await sendTextDraft(req.params.id, req.user!.userId);
+    const updated = await prisma.emailDraft.findUniqueOrThrow({ where: { id: req.params.id }, include: draftRelations });
+    res.json({ ...updated, dmSent: result.dmSent, dmSkippedReason: result.dmSkippedReason });
   }),
 );
 

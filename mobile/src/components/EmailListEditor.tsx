@@ -50,6 +50,10 @@ export function EmailListEditor({ emails, onAdd, onUpdate, onSetPrimary, onRemov
   const handleAdd = async () => {
     const email = newEmail.trim();
     if (!email) return;
+    if (emails.some((item) => item.email.trim().toLowerCase() === email.toLowerCase())) {
+      notify("추가 실패", "이미 인맥에 등록된 이메일입니다.");
+      return;
+    }
     setAdding(true);
     try {
       await onAdd(email);

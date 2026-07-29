@@ -86,6 +86,69 @@ export function CheckIcon({ size = 14, color, strokeWidth = 2.2 }: IconProps) {
   );
 }
 
+export function BellIcon({ size = 16, color, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 10.2c0-3.3 2.7-6 6-6s6 2.7 6 6v3.2l1.6 3.1H4.4L6 13.4V10.2Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path d="M9.6 19.4a2.4 2.4 0 0 0 4.8 0" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function SendIcon({ size = 16, color, strokeWidth = 1.9 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 12L20 4l-6.5 16-3-6.5L4 12Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function ChatIcon({ size = 16, color, strokeWidth = 1.8 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M4 5.5h16v10.2H9.8L5.5 19V15.7H4V5.5Z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function PhotoIcon({ size = 16, color, strokeWidth = 1.7 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 6h16v12H4V6Z" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+      <Circle cx="9" cy="10.5" r="1.6" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M4 16.5l5-4.5 4 3.5 3-2.5 4 3.5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function ProfileCardIcon({ size = 16, color, strokeWidth = 1.7 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Circle cx="9" cy="9" r="3" stroke={color} strokeWidth={strokeWidth} />
+      <Path d="M4 18c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      <Path d="M15.5 8.5h4M15.5 12h4" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function PlusIcon({ size = 16, color, strokeWidth = 2 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
