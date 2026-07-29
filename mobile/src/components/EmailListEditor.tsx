@@ -49,7 +49,7 @@ export function EmailListEditor({ emails, onAdd, onUpdate, onSetPrimary, onRemov
 
   const handleAdd = async () => {
     const email = newEmail.trim();
-    if (!email) return;
+    if (!EMAIL_REGEX.test(email)) return;
     setAdding(true);
     try {
       await onAdd(email);

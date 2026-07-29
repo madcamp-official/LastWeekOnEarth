@@ -12,7 +12,7 @@ export function HomeStackNavigator() {
   return (
     <Stack.Navigator initialRouteName="ContactsList">
       <Stack.Screen name="ContactsList" component={ContactsListScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ title: "인맥 상세" }} />
+      <Stack.Screen name="ContactDetail" component={ContactDetailScreen} options={{ headerShown: false }} />
       <Stack.Screen name="AddContact" component={AddContactScreen} options={{ headerShown: false }} />
       <Stack.Screen name="IncomingContacts" component={IncomingContactsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
