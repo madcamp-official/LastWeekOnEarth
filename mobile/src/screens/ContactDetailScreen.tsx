@@ -306,7 +306,20 @@ export function ContactDetailScreen({ route, navigation }: Props) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>이메일</Text>
-        {emails.length === 0 ? (
+        {contact.linkedEmails && contact.linkedEmails.length > 0 ? (
+          // 계정과 연결된 인맥은 태깅 시점 스냅샷이 아니라, 상대가 마이페이지에 등록해둔
+          // 모든 이메일을 실시간으로 보여준다.
+          contact.linkedEmails.map((email, index) => (
+            <View key={email} style={styles.emailRow}>
+              <Text style={styles.emailText}>{email}</Text>
+              {index === 0 ? (
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryBadgeText}>대표</Text>
+                </View>
+              ) : null}
+            </View>
+          ))
+        ) : emails.length === 0 ? (
           <Text style={styles.empty}>등록된 이메일이 없습니다.</Text>
         ) : (
           emails.map((item) => (

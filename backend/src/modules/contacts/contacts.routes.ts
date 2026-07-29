@@ -14,7 +14,9 @@ const router = Router();
 router.use(requireAuth);
 
 const LINKED_PROFILE_INCLUDE = {
-  targetUser: { select: { avatarUrl: true } },
+  targetUser: {
+    select: { avatarUrl: true, email: true, emails: { select: { email: true } } },
+  },
 } as const;
 
 type ContactWithLinkedProfile = Prisma.ContactGetPayload<{
@@ -23,10 +25,16 @@ type ContactWithLinkedProfile = Prisma.ContactGetPayload<{
 
 function toContactResponse(contact: ContactWithLinkedProfile) {
   const { targetUser, ...data } = contact;
+  // 계정과 연결된 인맥은 태깅 시점에 복사해둔 email 한 개짜리 스냅샷 대신, 상대가 마이페이지에서
+  // 등록해둔 모든 이메일을 실시간으로 보여준다 (대표 이메일이 배열 맨 앞에 오도록).
+  const linkedEmails = targetUser
+    ? Array.from(new Set([targetUser.email, ...targetUser.emails.map((e) => e.email)]))
+    : undefined;
   return {
     ...data,
     // 연결된 계정의 최신 프로필 사진을 우선 사용한다. 개인적으로 지정한 사진은 연결 계정이 없을 때 유지한다.
     photoUrl: targetUser?.avatarUrl ?? data.photoUrl,
+    linkedEmails,
   };
 }
 
@@ -163,12 +171,21 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const contacts = await prisma.contact.findMany({
       where: { ownerUserId: req.user!.userId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { sortOrder: "asc" },
       include: LINKED_PROFILE_INCLUDE,
     });
     res.json(contacts.map(toContactResponse));
   }),
 );
+
+// 새 인맥은 항상 목록 맨 뒤에 추가되도록 현재 이 유저의 가장 큰 sortOrder + 1을 붙인다.
+async function nextSortOrder(ownerUserId: string): Promise<number> {
+  const last = await prisma.contact.aggregate({
+    where: { ownerUserId },
+    _max: { sortOrder: true },
+  });
+  return (last._max.sortOrder ?? -1) + 1;
+}
 
 router.post(
   "/",
@@ -177,13 +194,35 @@ router.post(
     await assertNotOwnerIdentity(req.user!.userId, body.email, body.phone);
     await assertEmailNotUsedByAnotherContact(req.user!.userId, body.email);
     const targetUserId = await findLinkedUserId(body.email, body.phone, req.user!.userId);
+    const sortOrder = await nextSortOrder(req.user!.userId);
     const contact = await prisma.contact.create({
-      data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL", targetUserId },
+      data: { ...body, ownerUserId: req.user!.userId, source: "MANUAL", targetUserId, sortOrder },
     });
     if (contact.email) {
       await ensureContactPrimaryEmail(contact.id);
     }
     res.status(201).json(contact);
+  }),
+);
+
+// 인맥 목록에서 드래그로 정한 새 순서를 저장한다 — id 배열의 인덱스를 그대로 sortOrder로 쓴다.
+router.patch(
+  "/reorder",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const { order } = z.object({ order: z.array(z.string()).min(1) }).parse(req.body);
+    const owned = await prisma.contact.findMany({
+      where: { ownerUserId: req.user!.userId, id: { in: order } },
+      select: { id: true },
+    });
+    const ownedIds = new Set(owned.map((c) => c.id));
+    if (ownedIds.size !== order.length) {
+      throw new HttpError(400, "본인 소유가 아니거나 존재하지 않는 인맥이 포함되어 있습니다.");
+    }
+
+    await prisma.$transaction(
+      order.map((id, index) => prisma.contact.update({ where: { id }, data: { sortOrder: index } })),
+    );
+    res.status(204).send();
   }),
 );
 
@@ -241,6 +280,7 @@ router.post(
         phone: targetUser.phone,
         source: "BLE",
         lastContactedAt: new Date(),
+        sortOrder: await nextSortOrder(req.user!.userId),
       },
     });
     if (contact.email) {
@@ -343,6 +383,7 @@ router.post(
         email: targetUser.email,
         phone: targetUser.phone,
         source: "BLE",
+        sortOrder: await nextSortOrder(myId),
       },
     });
     if (contact.email) {

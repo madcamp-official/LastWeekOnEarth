@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import DraggableFlatList, { type RenderItemParams } from "react-native-draggable-flatlist";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -7,7 +8,7 @@ import type { RootStackParamList } from "../navigation/types";
 import { contactsApi, type Contact } from "../services/contactsApi";
 import { groupsApi, type ContactGroup } from "../services/groupsApi";
 import { confirmAction } from "../utils/confirm";
-import { GroupIcon, InboxIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/Icon";
+import { DragHandleIcon, GroupIcon, InboxIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { useTabBarHeight } from "../hooks/useTabBarHeight";
@@ -16,14 +17,6 @@ import { colors, radius, spacing } from "../theme/colors";
 type Props = NativeStackScreenProps<RootStackParamList, "ContactsList">;
 
 const AVATAR_COLORS = [colors.violet, colors.blue, colors.pink];
-
-// 가나다 -> ABC 순: 한글 이름을 먼저, 그다음 영문 이름을 각각 로케일 정렬한다.
-function compareByName(a: Contact, b: Contact): number {
-  const aKorean = /^[가-힣]/.test(a.name);
-  const bKorean = /^[가-힣]/.test(b.name);
-  if (aKorean !== bKorean) return aKorean ? -1 : 1;
-  return a.name.localeCompare(b.name, aKorean ? "ko" : "en");
-}
 
 function daysSince(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -82,6 +75,11 @@ export function ContactsListScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  // 검색/그룹 필터가 걸려있지 않을 때만 드래그로 순서를 바꿀 수 있다 — 필터링된 부분집합을
+  // 드래그하면 "어느 기준으로 순서가 바뀌는지" 애매해지기 때문. contacts는 서버에서 이미
+  // sortOrder 순으로 내려오므로 여기선 필터링만 하고 별도 정렬은 하지 않는다.
+  const canReorder = query.trim() === "" && groupFilter === "all";
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let base = q
@@ -95,8 +93,17 @@ export function ContactsListScreen({ navigation }: Props) {
     if (groupFilter !== "all") {
       base = base.filter((c) => membership[c.id]?.has(groupFilter));
     }
-    return [...base].sort(compareByName);
+    return base;
   }, [contacts, query, groupFilter, membership]);
+
+  const handleReorder = async (data: Contact[]) => {
+    setContacts(data);
+    try {
+      await contactsApi.reorder(data.map((c) => c.id));
+    } catch {
+      load();
+    }
+  };
 
   const newThisWeekCount = useMemo(
     () => contacts.filter((c) => (daysSince(c.createdAt) ?? 999) < 7).length,
@@ -108,6 +115,50 @@ export function ContactsListScreen({ navigation }: Props) {
       await contactsApi.remove(contact.id);
       load();
     });
+  };
+
+  const renderContactCard = (item: Contact, index: number, drag?: () => void, isActive?: boolean) => {
+    const days = daysSince(item.lastContactedAt);
+    return (
+      <View style={[styles.card, isActive && styles.cardDragging]}>
+        {canReorder && (
+          <Pressable onPressIn={drag} hitSlop={8} style={styles.dragHandle}>
+            <DragHandleIcon size={18} color={colors.faint} />
+          </Pressable>
+        )}
+        <Pressable
+          style={styles.cardBody}
+          onPress={() => navigation.navigate("ContactDetail", { contactId: item.id })}
+          disabled={isActive}
+        >
+          <View style={[styles.avatar, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
+            {item.photoUrl ? (
+              <Image source={{ uri: item.photoUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{item.name[0]}</Text>
+            )}
+          </View>
+
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.cardMeta} numberOfLines={1}>
+              {item.affiliation ?? "-"}
+            </Text>
+          </View>
+
+          <View style={styles.cardRight}>
+            <Text style={[styles.lastContact, { color: lastContactColor(days) }]}>{lastContactLabel(days)}</Text>
+            <Text style={styles.lastContactHint}>최근 연락</Text>
+          </View>
+
+          <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)} hitSlop={8}>
+            <TrashIcon size={16} color={colors.faint} />
+          </Pressable>
+        </Pressable>
+      </View>
+    );
   };
 
   return (
@@ -171,51 +222,28 @@ export function ContactsListScreen({ navigation }: Props) {
         총 {contacts.length}명 · 이번 주 {newThisWeekCount}명 태깅
       </Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
-        refreshing={loading}
-        onRefresh={load}
-        ListEmptyComponent={
-          <Text style={styles.empty}>{query ? "검색 결과가 없습니다." : "등록된 인맥이 없습니다."}</Text>
-        }
-        renderItem={({ item, index }) => {
-          const days = daysSince(item.lastContactedAt);
-          return (
-            <Pressable
-              style={styles.card}
-              onPress={() => navigation.navigate("ContactDetail", { contactId: item.id })}
-            >
-              <View style={[styles.avatar, { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] }]}>
-                {item.photoUrl ? (
-                  <Image source={{ uri: item.photoUrl }} style={styles.avatarImage} />
-                ) : (
-                  <Text style={styles.avatarText}>{item.name[0]}</Text>
-                )}
-              </View>
-
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.cardMeta} numberOfLines={1}>
-                  {item.affiliation ?? "-"}
-                </Text>
-              </View>
-
-              <View style={styles.cardRight}>
-                <Text style={[styles.lastContact, { color: lastContactColor(days) }]}>{lastContactLabel(days)}</Text>
-                <Text style={styles.lastContactHint}>최근 연락</Text>
-              </View>
-
-              <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)} hitSlop={8}>
-                <TrashIcon size={16} color={colors.faint} />
-              </Pressable>
-            </Pressable>
-          );
-        }}
-      />
+      {canReorder ? (
+        <DraggableFlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
+          onDragEnd={({ data }) => handleReorder(data)}
+          ListEmptyComponent={<Text style={styles.empty}>등록된 인맥이 없습니다.</Text>}
+          renderItem={({ item, getIndex, drag, isActive }: RenderItemParams<Contact>) =>
+            renderContactCard(item, getIndex() ?? 0, drag, isActive)
+          }
+        />
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
+          refreshing={loading}
+          onRefresh={load}
+          ListEmptyComponent={<Text style={styles.empty}>검색 결과가 없습니다.</Text>}
+          renderItem={({ item, index }) => renderContactCard(item, index)}
+        />
+      )}
     </View>
     </KeyboardAvoidingScreen>
   );
@@ -267,11 +295,19 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+    backgroundColor: colors.bg,
+  },
+  cardDragging: { backgroundColor: colors.card, borderRadius: radius.md },
+  dragHandle: { paddingVertical: spacing.md, paddingHorizontal: spacing.sm },
+  cardBody: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
   },
   avatar: {
     width: 48,

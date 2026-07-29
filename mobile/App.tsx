@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import LoginScreen from "./src/screens/LoginScreen";
@@ -47,11 +48,13 @@ function AppContent() {
 export default function App() {
   if (Platform.OS !== "web") {
     return (
-      <SafeAreaProvider>
-        <KeyboardProvider>
-          <AppContent />
-        </KeyboardProvider>
-      </SafeAreaProvider>
+      <GestureHandlerRootView style={styles.flexFill}>
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <AppContent />
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
     );
   }
 
@@ -68,6 +71,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  flexFill: { flex: 1 },
   splash: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   webBackdrop: {
     flex: 1,

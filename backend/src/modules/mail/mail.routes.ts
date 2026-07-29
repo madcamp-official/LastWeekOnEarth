@@ -274,7 +274,7 @@ router.post(
     if (draft.channel === "EMAIL") {
       const result = await sendEmailDraft(req.params.id, req.user!.userId);
       const updated = await prisma.emailDraft.findUniqueOrThrow({ where: { id: req.params.id }, include: draftRelations });
-      res.json({ ...updated, gmailMessageId: result.messageId, dmSent: result.dmSent, dmSkippedReason: result.dmSkippedReason });
+      res.json({ ...updated, gmailMessageId: result.messageId });
       return;
     }
 

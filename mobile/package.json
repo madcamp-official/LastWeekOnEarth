@@ -45,6 +45,7 @@
     "react-native-ble-peripheral": "^2.0.1",
     "react-native-ble-plx": "^3.2.1",
     "react-native-config": "^1.5.3",
+    "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-image-viewing": "^0.2.2",
     "react-native-keyboard-controller": "^1.22.2",

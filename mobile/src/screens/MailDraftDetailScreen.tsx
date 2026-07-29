@@ -126,13 +126,7 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
           const result = await mailApi.send(draftId);
           setDraft(result);
           if (isEmail) {
-            if (result.dmSent) {
-              notify("발송 완료", "메일이 발송되었고, 쪽지로도 전달했어요.");
-            } else if (result.dmSkippedReason) {
-              notify("발송 완료", `메일이 발송되었습니다.\n${result.dmSkippedReason}`);
-            } else {
-              notify("발송 완료", "메일이 발송되었습니다.");
-            }
+            notify("발송 완료", "메일이 발송되었습니다.");
           } else {
             notify("발송 완료", "쪽지로 전달했어요.");
           }
@@ -151,7 +145,12 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  const commitSchedule = async (scheduledAt: Date) => {
+  const commitSchedule = async (rawScheduledAt: Date) => {
+    // iOS 스피너는 초 단위가 선택 시점의 현재 초를 그대로 들고 있어서(분만 고르는 UI인데도),
+    // "5시 2분"을 골랐는데 실제로는 5시 2분 47초처럼 어중간하게 발송되던 문제 — 항상 00초로 맞춘다.
+    const scheduledAt = new Date(rawScheduledAt);
+    scheduledAt.setSeconds(0, 0);
+
     if (scheduledAt.getTime() <= Date.now()) {
       notify("현재 시각보다 이후로 선택해주세요.");
       return;
