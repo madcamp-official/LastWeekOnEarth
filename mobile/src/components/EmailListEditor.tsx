@@ -18,6 +18,9 @@ interface Props {
   onRemove: (id: string) => Promise<void>;
 }
 
+// 서버(email.controller.ts) 및 LoginScreen.tsx와 동일한 규칙.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function getErrorMessage(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err) && err.response?.data?.error) {
     return err.response.data.error;
@@ -45,11 +48,7 @@ export function EmailListEditor({ emails, onAdd, onUpdate, onSetPrimary, onRemov
 
   const handleAdd = async () => {
     const email = newEmail.trim();
-    const validationError = validateEmail(email);
-    if (validationError) {
-      notify("추가 실패", validationError);
-      return;
-    }
+    if (!email) return;
     setAdding(true);
     try {
       await onAdd(email);
@@ -193,7 +192,11 @@ export function EmailListEditor({ emails, onAdd, onUpdate, onSetPrimary, onRemov
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <Pressable style={styles.addButton} onPress={handleAdd} disabled={adding}>
+        <Pressable
+          style={[styles.addButton, !isValidEmail && styles.addButtonDisabled]}
+          onPress={handleAdd}
+          disabled={adding || !isValidEmail}
+        >
           <Text style={styles.addButtonText}>{adding ? "추가 중..." : "추가"}</Text>
         </Pressable>
       </View>
@@ -240,5 +243,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   addButton: { backgroundColor: colors.violet, borderRadius: radius.md, paddingHorizontal: 14, justifyContent: "center" },
+  addButtonDisabled: { backgroundColor: colors.faint },
   addButtonText: { color: "#fff", fontWeight: "600", fontSize: 13 },
 });

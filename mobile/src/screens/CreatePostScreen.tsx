@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi } from "../services/postsApi";
+import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
 import { colors, radius, spacing } from "../theme/colors";
@@ -12,6 +14,7 @@ import { colors, radius, spacing } from "../theme/colors";
 type Props = NativeStackScreenProps<PostStackParamList, "CreatePost">;
 
 export function CreatePostScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [content, setContent] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -54,6 +57,11 @@ export function CreatePostScreen({ navigation }: Props) {
   };
 
   return (
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <BackButton onPress={() => navigation.goBack()} />
+        <Text style={styles.headerTitle}>소식 올리기</Text>
+      </View>
     <KeyboardAvoidingScreen>
     <View style={styles.container}>
       <TextInput
@@ -86,10 +94,19 @@ export function CreatePostScreen({ navigation }: Props) {
       </Pressable>
     </View>
     </KeyboardAvoidingScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.lg,
+  },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
   container: { flex: 1, padding: spacing.lg, gap: spacing.md, backgroundColor: colors.bg },
   contentInput: {
     minHeight: 140,

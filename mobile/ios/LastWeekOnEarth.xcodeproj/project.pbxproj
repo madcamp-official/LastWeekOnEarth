@@ -91,6 +91,14 @@
 			path = BLEPeripheral;
 			sourceTree = "<group>";
 		};
+		23DC99A43AD642D788CD141B /* BLEPeripheral */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = BLEPeripheral;
+			path = BLEPeripheral;
+			sourceTree = "<group>";
+		};
 		2C2FFAACB335452EBA506BE9 /* BLEPeripheral */ = {
 			isa = PBXGroup;
 			children = (
@@ -129,6 +137,7 @@
 				2C2FFAACB335452EBA506BE9 /* BLEPeripheral */,
 				17983B62DC3245AF8A9EC323 /* BLEPeripheral */,
 				BEEFE5CB6DF24C7F99F882A1 /* BLEPeripheral */,
+				23DC99A43AD642D788CD141B /* BLEPeripheral */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
