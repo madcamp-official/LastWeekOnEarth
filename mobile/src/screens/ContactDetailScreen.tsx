@@ -12,12 +12,14 @@ import {
   type ContactEmail,
   type ContactLog,
   type ContactMethod,
+  type LogChannel,
 } from "../services/contactsApi";
 import { confirmAction, notify } from "../utils/confirm";
 import { ActionSheet } from "../components/ActionSheet";
 import { BackButton } from "../components/BackButton";
 import { EmailListEditor } from "../components/EmailListEditor";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
@@ -33,6 +35,13 @@ function formatContactMethod(method: ContactMethod): string {
   return CONTACT_METHOD_OPTIONS.find((option) => option.value === method)?.label ?? "기타";
 }
 
+const LOG_CHANNEL_LABELS: Record<LogChannel, string> = {
+  EMAIL: "이메일 발송",
+  CALL: "전화",
+  MEETING: "직접 만남",
+  OTHER: "기타 연락",
+};
+
 function getSaveErrorMessage(err: unknown): string {
   if (axios.isAxiosError(err)) {
     if (err.response?.data?.error) return err.response.data.error;
@@ -43,6 +52,7 @@ function getSaveErrorMessage(err: unknown): string {
 
 export function ContactDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const { contactId } = route.params;
   const [contact, setContact] = useState<Contact | null>(null);
   const [logs, setLogs] = useState<ContactLog[]>([]);
@@ -172,7 +182,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
         <Text style={styles.headerTitle}>인맥 상세</Text>
       </View>
       <KeyboardAvoidingScreen>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: tabBarHeight }}>
         <Pressable style={styles.photoPicker} onPress={handlePhotoPress}>
           {photoUrl ? (
             <Image source={{ uri: photoUrl }} style={styles.photo} />
@@ -270,7 +280,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       <BackButton onPress={() => navigation.goBack()} />
       <Text style={styles.headerTitle}>인맥 상세</Text>
     </View>
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: tabBarHeight }}>
       <View style={styles.detailHeader}>
         <View style={styles.detailInfo}>
           <Text style={styles.name}>{contact.name}</Text>
@@ -330,7 +340,8 @@ export function ContactDetailScreen({ route, navigation }: Props) {
       ) : (
         logs.map((log) => (
           <View key={log.id} style={styles.logRow}>
-            <Text>{log.channel}</Text>
+            <Text style={styles.logChannel}>{LOG_CHANNEL_LABELS[log.channel]}</Text>
+            {log.memo ? <Text style={styles.logMemo}>{log.memo}</Text> : null}
             <Text style={styles.meta}>{new Date(log.contactedAt).toLocaleString()}</Text>
           </View>
         ))
@@ -391,6 +402,8 @@ const styles = StyleSheet.create({
   primaryBadgeText: { color: colors.violet, fontWeight: "600", fontSize: 11 },
   empty: { color: colors.faint },
   logRow: { paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.line },
+  logChannel: { fontWeight: "700", color: colors.ink },
+  logMemo: { color: colors.sub, marginTop: 2 },
   photoPicker: {
     width: 88,
     height: 88,

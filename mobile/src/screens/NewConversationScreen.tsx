@@ -6,6 +6,7 @@ import type { PostStackParamList } from "../navigation/postTypes";
 import { messagesApi } from "../services/messagesApi";
 import type { PostAuthor } from "../services/postsApi";
 import { BackButton } from "../components/BackButton";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "NewConversation">;
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<PostStackParamList, "NewConversation">;
 // 아직 쪽지를 주고받은 적 없어도, 소식 피드처럼 "이웃"(BLE 태깅/이메일 매칭)이면 바로 대화를 시작할 수 있다.
 export function NewConversationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [contacts, setContacts] = useState<PostAuthor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +35,7 @@ export function NewConversationScreen({ navigation }: Props) {
       <FlatList
         data={contacts}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={
           <Text style={styles.empty}>
             {loading ? "" : "대화를 시작할 수 있는 인맥이 없습니다. BLE로 태깅했거나 이메일이 일치하는 인맥이 계정을 가지고 있어야 해요."}
@@ -64,8 +66,8 @@ export function NewConversationScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  title: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.sm },
   row: {
     flexDirection: "row",

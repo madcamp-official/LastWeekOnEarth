@@ -10,6 +10,7 @@ import { ActionSheet } from "../components/ActionSheet";
 import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 import { notify } from "../utils/confirm";
 
@@ -40,6 +41,7 @@ function OptionChip({ label, active, onPress }: { label: string; active: boolean
 
 export function AddContactScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [name, setName] = useState("");
   const [affiliation, setAffiliation] = useState("");
   const [email, setEmail] = useState("");
@@ -122,7 +124,10 @@ export function AddContactScreen({ navigation }: Props) {
         <Text style={styles.headerTitle}>인맥 추가</Text>
       </View>
     <KeyboardAvoidingScreen>
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={[styles.container, { paddingBottom: tabBarHeight }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <Pressable style={styles.photoPicker} onPress={handlePhotoPress}>
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.photo} />

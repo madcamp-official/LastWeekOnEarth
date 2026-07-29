@@ -42,6 +42,8 @@ export const postsApi = {
 
   listFeed: () => api.get<Post[]>("/posts/feed").then((res) => res.data),
 
+  get: (id: string) => api.get<Post>(`/posts/${id}`).then((res) => res.data),
+
   create: (input: CreatePostInput) => api.post<Post>("/posts", input).then((res) => res.data),
 
   remove: (id: string) => api.delete(`/posts/${id}`),

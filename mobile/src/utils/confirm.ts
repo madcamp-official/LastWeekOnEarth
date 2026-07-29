@@ -20,6 +20,25 @@ export function confirmAction(title: string, onConfirm: () => void, confirmLabel
 }
 
 /**
+ * confirmAction과 동일하지만 삭제류가 아닌 긍정 액션(등록 등)용 — iOS에서 destructive 스타일(빨간
+ * 글씨)로 그려지지 않도록 별도로 분리했다.
+ */
+export function confirmPositive(title: string, onConfirm: () => void, confirmLabel = "확인") {
+  if (Platform.OS === "web") {
+    const webConfirm = (globalThis as { confirm?: (message: string) => boolean }).confirm;
+    if (webConfirm?.(title)) {
+      onConfirm();
+    }
+    return;
+  }
+
+  Alert.alert(title, undefined, [
+    { text: "취소", style: "cancel" },
+    { text: confirmLabel, onPress: onConfirm },
+  ]);
+}
+
+/**
  * 버튼 없는 단순 알림. react-native-web의 Alert.alert는 no-op이라 web에서는 window.alert로 대체한다.
  */
 export function notify(title: string, message?: string) {

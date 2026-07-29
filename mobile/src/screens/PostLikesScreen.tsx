@@ -5,12 +5,14 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { PostStackParamList } from "../navigation/postTypes";
 import { postsApi, type PostLiker } from "../services/postsApi";
 import { BackButton } from "../components/BackButton";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<PostStackParamList, "PostLikes">;
 
 export function PostLikesScreen({ navigation, route }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [likers, setLikers] = useState<PostLiker[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,7 +33,7 @@ export function PostLikesScreen({ navigation, route }: Props) {
       <FlatList
         data={likers}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         ListEmptyComponent={
           <Text style={styles.empty}>{loading ? "" : "아직 좋아요를 누른 사람이 없습니다."}</Text>
         }
@@ -57,8 +59,8 @@ export function PostLikesScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
-  title: { fontSize: 20, fontWeight: "800", color: colors.ink },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.sm, padding: spacing.lg },
+  title: { fontSize: 22, fontWeight: "800", color: colors.ink },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.sm },
   row: {
     flexDirection: "row",

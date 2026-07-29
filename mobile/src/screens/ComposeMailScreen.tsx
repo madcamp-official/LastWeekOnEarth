@@ -12,6 +12,7 @@ import { BackButton } from "../components/BackButton";
 import { SearchIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<MailStackParamList, "ComposeMail">;
@@ -65,6 +66,7 @@ function getErrorMessage(err: unknown, fallback: string): string {
 
 export function ComposeMailScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [recipientMode, setRecipientMode] = useState<RecipientMode>("CONTACT");
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -222,6 +224,7 @@ export function ComposeMailScreen({ navigation }: Props) {
       <FlatList
         data={recipientMode === "CONTACT" && !selectedContactId ? filteredContacts : []}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: tabBarHeight }}
         refreshing={recipientMode === "CONTACT" ? loadingContacts : loadingGroups}
         onRefresh={recipientMode === "CONTACT" ? loadContacts : loadGroups}
         ListHeaderComponent={

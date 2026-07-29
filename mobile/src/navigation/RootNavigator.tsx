@@ -9,6 +9,7 @@ import { PostStackNavigator } from "./PostStackNavigator";
 import { MyPageScreen } from "../screens/MyPageScreen";
 import { BleTagScreen } from "../screens/BleTagScreen";
 import { TabIcon, type TabIconName } from "../components/TabIcon";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors } from "../theme/colors";
 
 const Tab = createBottomTabNavigator();
@@ -29,7 +30,7 @@ export function RootNavigator() {
   // height 안에서 아이콘+글자가 위쪽으로 몰리고 아래쪽만 비어 보였다. 콘텐츠 높이(56)에 실제
   // 하단 안전영역을 직접 더해서 두 플랫폼에서 동일하게 보이도록 한다.
   const insets = useSafeAreaInsets();
-  const tabBarHeight = 56 + insets.bottom;
+  const tabBarHeight = useTabBarHeight();
 
   return (
     <NavigationContainer>

@@ -1,46 +1,21 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, Alert, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as WebBrowser from "expo-web-browser";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import axios from "axios";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MailStackParamList } from "../navigation/mailTypes";
 import { mailApi, type MailDraft } from "../services/mailApi";
 import { gmailApi } from "../services/gmailApi";
 import { confirmAction, notify } from "../utils/confirm";
+import { BackButton } from "../components/BackButton";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
-
-const WEEKDAY_LABEL = ["일", "월", "화", "수", "목", "금", "토"];
-const DATE_CHOICE_DAYS = 14;
-
-function dateOnly(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function buildDateChoices(): Date[] {
-  const today = dateOnly(new Date());
-  return Array.from({ length: DATE_CHOICE_DAYS }, (_, i) => new Date(today.getTime() + i * 24 * 60 * 60 * 1000));
-}
-
-function formatDateChoiceLabel(d: Date, index: number): string {
-  if (index === 0) return "오늘";
-  if (index === 1) return "내일";
-  return `${d.getMonth() + 1}/${d.getDate()} (${WEEKDAY_LABEL[d.getDay()]})`;
-}
-
-// 정시/30분 단위 시간 슬롯 (00:00 ~ 23:30, 48개).
-function buildTimeSlots(): { hour: number; minute: number; label: string }[] {
-  const slots: { hour: number; minute: number; label: string }[] = [];
-  for (let hour = 0; hour < 24; hour++) {
-    for (const minute of [0, 30]) {
-      slots.push({ hour, minute, label: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}` });
-    }
-  }
-  return slots;
-}
 
 function extractErrorMessage(err: unknown): string {
   return axios.isAxiosError(err) && err.response?.data?.error ? err.response.data.error : "요청 처리 중 오류가 발생했습니다.";
@@ -49,6 +24,8 @@ function extractErrorMessage(err: unknown): string {
 type Props = NativeStackScreenProps<MailStackParamList, "MailDraftDetail">;
 
 export function MailDraftDetailScreen({ route, navigation }: Props) {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const { draftId } = route.params;
   const [draft, setDraft] = useState<MailDraft | null>(null);
   const [subject, setSubject] = useState("");
@@ -58,10 +35,13 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
   const [savedBody, setSavedBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  // iOS는 커스텀 모달 안에 스피너를 그대로 넣어 날짜+시간을 한 화면에서 스크롤로 고르지만,
+  // 안드로이드는 이 라이브러리가 datetime 모드를 "날짜 다이얼로그 → 시간 다이얼로그" 두 단계
+  // 네이티브 팝업으로 나눠서 처리한다(OS 자체 제약, 라이브러리로 못 합침) — 그래서 안드로이드는
+  // 우리 모달을 안 쓰고 이 두 단계를 순서대로 띄운다.
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
-  const dateChoices = useMemo(buildDateChoices, []);
-  const timeSlots = useMemo(buildTimeSlots, []);
-  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+  const [androidPickerStage, setAndroidPickerStage] = useState<"date" | "time" | null>(null);
+  const [scheduleDraft, setScheduleDraft] = useState(() => new Date(Date.now() + 60 * 60 * 1000));
 
   const isDirty = subject !== savedSubject || body !== savedBody;
 
@@ -171,15 +151,11 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
     );
   };
 
-  const handleSelectTimeSlot = (hour: number, minute: number) => {
-    const base = dateChoices[selectedDateIndex];
-    const scheduledAt = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hour, minute, 0, 0);
-    if (scheduledAt.getTime() <= Date.now()) return;
-    handleSchedule(scheduledAt);
-  };
-
-  const handleSchedule = async (scheduledAt: Date) => {
-    setScheduleModalVisible(false);
+  const commitSchedule = async (scheduledAt: Date) => {
+    if (scheduledAt.getTime() <= Date.now()) {
+      notify("현재 시각보다 이후로 선택해주세요.");
+      return;
+    }
     setSending(true);
     try {
       await saveIfDirty();
@@ -193,160 +169,216 @@ export function MailDraftDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  useEffect(() => {
-    if (!draft) {
-      navigation.setOptions({ headerRight: undefined });
-      return;
+  const openScheduleModal = () => {
+    // 이미 예약돼 있으면 그 시각을 그대로 열어서 "바꾸는" 느낌으로, 아니면 1시간 뒤를 기본값으로.
+    const initial = draft?.status === "SCHEDULED" && draft.scheduledAt
+      ? new Date(draft.scheduledAt)
+      : new Date(Date.now() + 60 * 60 * 1000);
+    setScheduleDraft(initial);
+    if (Platform.OS === "android") {
+      setAndroidPickerStage("date");
+    } else {
+      setScheduleModalVisible(true);
     }
+  };
 
-    navigation.setOptions({
-      headerRight: () =>
-        sending ? (
-          <ActivityIndicator style={styles.headerSpinner} />
-        ) : draft.status === "SENT" ? null : (
-          <View style={styles.headerActions}>
-            <Pressable onPress={() => setScheduleModalVisible(true)} hitSlop={8}>
-              <Text style={styles.headerActionText}>예약하기</Text>
-            </Pressable>
-            <Pressable onPress={handleSendNow} hitSlop={8}>
-              <Text style={[styles.headerActionText, styles.headerActionPrimary]}>발송하기</Text>
-            </Pressable>
-          </View>
-        ),
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, sending, subject, body, isDirty]);
+  const handleCancelSchedule = () => {
+    confirmAction(
+      "예약을 취소할까요?",
+      async () => {
+        setSending(true);
+        try {
+          const updated = await mailApi.update(draftId, { status: "DRAFT" });
+          setDraft(updated);
+          notify("예약이 취소됐어요.");
+        } catch (err) {
+          notify("예약 취소 실패", extractErrorMessage(err));
+        } finally {
+          setSending(false);
+        }
+      },
+      "예약 취소",
+    );
+  };
+
+  const handleIOSConfirm = () => {
+    setScheduleModalVisible(false);
+    commitSchedule(scheduleDraft);
+  };
+
+  const handleAndroidDateChange = (event: DateTimePickerEvent, date?: Date) => {
+    setAndroidPickerStage(null);
+    if (event.type === "dismissed" || !date) return;
+    setScheduleDraft(date);
+    setAndroidPickerStage("time");
+  };
+
+  const handleAndroidTimeChange = (event: DateTimePickerEvent, date?: Date) => {
+    setAndroidPickerStage(null);
+    if (event.type === "dismissed" || !date) return;
+    const combined = new Date(scheduleDraft);
+    combined.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    commitSchedule(combined);
+  };
 
   if (!draft) return null;
 
   return (
-    <KeyboardAvoidingScreen>
-    <ScrollView style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.contactName}>
-          {draft.contact?.name ?? (draft.group ? `${draft.group.name} (그룹 공통)` : "삭제된 인맥")}
-        </Text>
-        <View style={styles.channelBadge}>
-          <Text style={styles.channelBadgeText}>{draft.channel === "EMAIL" ? "이메일" : "문자"}</Text>
+    <View style={styles.screen}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View style={styles.headerLeft}>
+          <BackButton onPress={() => navigation.goBack()} />
+          <Text style={styles.headerTitle}>초안</Text>
         </View>
-      </View>
-      {draft.status === "SENT" && <Text style={styles.statusSent}>발송 완료</Text>}
-      {draft.status === "SCHEDULED" && draft.scheduledAt && (
-        <Text style={styles.statusScheduled}>{new Date(draft.scheduledAt).toLocaleString()}에 예약 발송 예정</Text>
-      )}
-      {draft.contact?.affiliation ? <Text style={styles.meta}>{draft.contact.affiliation}</Text> : null}
-      {draft.group ? <Text style={styles.meta}>그룹 전체에게 동일하게 발송할 공통 초안이에요.</Text> : null}
-
-      {draft.channel === "EMAIL" && (
-        <>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>제목</Text>
-            <Pressable onPress={() => handleCopy(subject, "제목")} hitSlop={8}>
-              <Text style={styles.copyLink}>복사</Text>
+        {sending ? (
+          <ActivityIndicator color={colors.violet} />
+        ) : draft.status === "SENT" ? null : (
+          <View style={styles.headerActions}>
+            <Pressable onPress={openScheduleModal} hitSlop={8}>
+              <Text style={styles.headerActionText}>{draft.status === "SCHEDULED" ? "예약 변경" : "예약"}</Text>
+            </Pressable>
+            <Pressable onPress={handleSendNow} hitSlop={8}>
+              <Text style={[styles.headerActionText, styles.headerActionPrimary]}>발송</Text>
             </Pressable>
           </View>
-          <TextInput style={styles.input} value={subject} onChangeText={setSubject} />
-        </>
-      )}
-
-      <View style={styles.labelRow}>
-        <Text style={styles.label}>본문</Text>
-        <Pressable onPress={() => handleCopy(body, "본문")} hitSlop={8}>
-          <Text style={styles.copyLink}>복사</Text>
-        </Pressable>
-      </View>
-      <TextInput
-        style={[styles.input, styles.bodyInput]}
-        value={body}
-        onChangeText={setBody}
-        multiline
-        textAlignVertical="top"
-      />
-
-      <View style={styles.actions}>
-        <Pressable style={[styles.button, styles.danger]} onPress={handleDelete}>
-          <Text style={styles.buttonText}>삭제</Text>
-        </Pressable>
-        <Pressable style={styles.buttonFlex} onPress={handleSave} disabled={saving || !isDirty}>
-          {saving || !isDirty ? (
-            <View style={[styles.button, styles.buttonDisabled]}>
-              <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
-            </View>
-          ) : (
-            <SolidButtonView style={styles.button} borderRadius={radius.md}>
-              <Text style={styles.buttonText}>저장</Text>
-            </SolidButtonView>
-          )}
-        </Pressable>
+        )}
       </View>
 
-      <Modal
-        visible={scheduleModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setScheduleModalVisible(false)}
-      >
-        <Pressable style={styles.modalBackdrop} onPress={() => setScheduleModalVisible(false)}>
-          <Pressable style={styles.modalCardWide} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>언제 발송할까요?</Text>
-
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={dateChoices}
-              keyExtractor={(d) => d.toISOString()}
-              contentContainerStyle={styles.dateChipsRow}
-              renderItem={({ item, index }) => {
-                const active = index === selectedDateIndex;
-                return (
-                  <Pressable onPress={() => setSelectedDateIndex(index)}>
-                    {active ? (
-                      <SolidButtonView style={styles.dateChip} borderRadius={radius.pill}>
-                        <Text style={styles.dateChipTextActive}>{formatDateChoiceLabel(item, index)}</Text>
-                      </SolidButtonView>
-                    ) : (
-                      <View style={[styles.dateChip, styles.dateChipInactive]}>
-                        <Text style={styles.dateChipText}>{formatDateChoiceLabel(item, index)}</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              }}
-            />
-
-            <FlatList
-              data={timeSlots}
-              keyExtractor={(slot) => slot.label}
-              numColumns={4}
-              style={styles.timeGrid}
-              renderItem={({ item }) => {
-                const base = dateChoices[selectedDateIndex];
-                const slotDate = new Date(base.getFullYear(), base.getMonth(), base.getDate(), item.hour, item.minute, 0, 0);
-                const disabled = slotDate.getTime() <= Date.now();
-                return (
-                  <Pressable
-                    style={[styles.timeSlot, disabled && styles.timeSlotDisabled]}
-                    disabled={disabled}
-                    onPress={() => handleSelectTimeSlot(item.hour, item.minute)}
-                  >
-                    <Text style={[styles.timeSlotText, disabled && styles.timeSlotTextDisabled]}>{item.label}</Text>
-                  </Pressable>
-                );
-              }}
-            />
-
-            <Pressable style={styles.modalCancel} onPress={() => setScheduleModalVisible(false)}>
-              <Text style={styles.modalCancelText}>취소</Text>
+      <KeyboardAvoidingScreen>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: tabBarHeight }}>
+        <View style={styles.headerRow}>
+          <Text style={styles.contactName}>
+            {draft.contact?.name ?? (draft.group ? `${draft.group.name} (그룹 공통)` : "삭제된 인맥")}
+          </Text>
+          <View style={styles.channelBadge}>
+            <Text style={styles.channelBadgeText}>{draft.channel === "EMAIL" ? "이메일" : "문자"}</Text>
+          </View>
+        </View>
+        {draft.status === "SENT" && <Text style={styles.statusSent}>발송 완료</Text>}
+        {draft.status === "SCHEDULED" && draft.scheduledAt && (
+          <View style={styles.scheduledRow}>
+            <Text style={styles.statusScheduled}>{new Date(draft.scheduledAt).toLocaleString()}에 예약 발송 예정</Text>
+            <Pressable onPress={handleCancelSchedule} hitSlop={8}>
+              <Text style={styles.cancelScheduleLink}>예약 취소</Text>
             </Pressable>
+          </View>
+        )}
+        {draft.contact?.affiliation ? <Text style={styles.meta}>{draft.contact.affiliation}</Text> : null}
+        {draft.group ? <Text style={styles.meta}>그룹 전체에게 동일하게 발송할 공통 초안이에요.</Text> : null}
+
+        {draft.channel === "EMAIL" && (
+          <>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>제목</Text>
+              <Pressable onPress={() => handleCopy(subject, "제목")} hitSlop={8}>
+                <Text style={styles.copyLink}>복사</Text>
+              </Pressable>
+            </View>
+            <TextInput style={styles.input} value={subject} onChangeText={setSubject} />
+          </>
+        )}
+
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>본문</Text>
+          <Pressable onPress={() => handleCopy(body, "본문")} hitSlop={8}>
+            <Text style={styles.copyLink}>복사</Text>
           </Pressable>
-        </Pressable>
-      </Modal>
-    </ScrollView>
-    </KeyboardAvoidingScreen>
+        </View>
+        <TextInput
+          style={[styles.input, styles.bodyInput]}
+          value={body}
+          onChangeText={setBody}
+          multiline
+          textAlignVertical="top"
+        />
+
+        <View style={styles.actions}>
+          <Pressable style={styles.actionButtonFlex} onPress={handleDelete}>
+            <View style={[styles.button, styles.danger]}>
+              <Text style={styles.buttonText}>삭제</Text>
+            </View>
+          </Pressable>
+          <Pressable style={styles.actionButtonFlex} onPress={handleSave} disabled={saving || !isDirty}>
+            {saving || !isDirty ? (
+              <View style={[styles.button, styles.buttonDisabled]}>
+                <Text style={styles.buttonText}>{saving ? "저장 중..." : "저장"}</Text>
+              </View>
+            ) : (
+              <SolidButtonView style={styles.button} borderRadius={radius.md}>
+                <Text style={styles.buttonText}>저장</Text>
+              </SolidButtonView>
+            )}
+          </Pressable>
+        </View>
+
+        {Platform.OS === "ios" && (
+          <Modal
+            visible={scheduleModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setScheduleModalVisible(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setScheduleModalVisible(false)}>
+              <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+                <Text style={styles.modalTitle}>언제 발송할까요?</Text>
+
+                <DateTimePicker
+                  value={scheduleDraft}
+                  mode="datetime"
+                  display="spinner"
+                  minimumDate={new Date()}
+                  onChange={(_event, date) => {
+                    if (date) setScheduleDraft(date);
+                  }}
+                  locale="ko-KR"
+                  style={styles.picker}
+                />
+
+                <View style={styles.modalActions}>
+                  <Pressable style={styles.modalActionFlex} onPress={() => setScheduleModalVisible(false)}>
+                    <View style={[styles.modalButton, styles.modalCancelButton]}>
+                      <Text style={styles.modalCancelText}>취소</Text>
+                    </View>
+                  </Pressable>
+                  <Pressable style={styles.modalActionFlex} onPress={handleIOSConfirm}>
+                    <SolidButtonView style={styles.modalButton} borderRadius={radius.md}>
+                      <Text style={styles.modalConfirmText}>예약</Text>
+                    </SolidButtonView>
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
+        )}
+
+        {Platform.OS === "android" && androidPickerStage === "date" && (
+          <DateTimePicker
+            value={scheduleDraft}
+            mode="date"
+            display="spinner"
+            minimumDate={new Date()}
+            onChange={handleAndroidDateChange}
+          />
+        )}
+        {Platform.OS === "android" && androidPickerStage === "time" && (
+          <DateTimePicker value={scheduleDraft} mode="time" display="spinner" onChange={handleAndroidTimeChange} />
+        )}
+      </ScrollView>
+      </KeyboardAvoidingScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: spacing.lg,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.ink },
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   contactName: { fontSize: 20, fontWeight: "800", color: colors.ink },
@@ -372,53 +404,32 @@ const styles = StyleSheet.create({
   },
   bodyInput: { minHeight: 200 },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: 24, marginBottom: 32 },
-  button: { borderRadius: radius.md, padding: 12, alignItems: "center" },
-  buttonFlex: { flex: 1 },
+  actionButtonFlex: { flex: 1 },
+  button: { height: 48, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   buttonDisabled: { backgroundColor: colors.faint },
-  danger: { flex: 1, backgroundColor: colors.danger },
+  danger: { backgroundColor: colors.danger },
   buttonText: { color: "#fff", fontWeight: "600" },
   statusSent: { color: colors.blue, fontWeight: "700", marginTop: 6 },
-  statusScheduled: { color: colors.violet, fontWeight: "700", marginTop: 6 },
-  headerActions: { flexDirection: "row", gap: spacing.md, paddingRight: Platform.OS === "ios" ? 0 : spacing.sm },
-  headerActionText: { color: colors.ink, fontWeight: "600", fontSize: 14 },
+  scheduledRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 6 },
+  statusScheduled: { color: colors.violet, fontWeight: "700" },
+  cancelScheduleLink: { color: colors.danger, fontWeight: "600", fontSize: 12.5 },
+  headerActions: { flexDirection: "row", gap: spacing.md },
+  headerActionText: { color: colors.ink, fontWeight: "600", fontSize: 15 },
   headerActionPrimary: { color: colors.violet, fontWeight: "800" },
-  headerSpinner: { marginRight: spacing.sm },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
   modalCard: {
-    width: "80%",
+    width: "88%",
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     padding: spacing.lg,
-  },
-  modalCardWide: {
-    width: "92%",
-    maxHeight: "80%",
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-  },
-  modalTitle: { fontWeight: "800", fontSize: 16, color: colors.ink, marginBottom: 12 },
-  modalOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.line },
-  modalOptionText: { fontSize: 15, color: colors.ink },
-  modalCancel: { paddingVertical: 12, alignItems: "center", marginTop: 4 },
-  modalCancelText: { color: colors.sub, fontWeight: "600" },
-  dateChipsRow: { gap: spacing.sm, paddingBottom: spacing.sm },
-  dateChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.pill },
-  dateChipInactive: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.line },
-  dateChipText: { fontSize: 13, fontWeight: "600", color: colors.sub },
-  dateChipTextActive: { fontSize: 13, fontWeight: "600", color: "#fff" },
-  timeGrid: { marginTop: spacing.md, maxHeight: 260 },
-  timeSlot: {
-    flex: 1,
-    margin: 4,
-    paddingVertical: 10,
     alignItems: "center",
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.bg,
   },
-  timeSlotDisabled: { opacity: 0.35 },
-  timeSlotText: { fontSize: 13, fontWeight: "600", color: colors.ink },
-  timeSlotTextDisabled: { color: colors.faint },
+  modalTitle: { fontWeight: "800", fontSize: 16, color: colors.ink, marginBottom: 12, alignSelf: "flex-start" },
+  picker: { width: "100%" },
+  modalActions: { flexDirection: "row", gap: spacing.sm, width: "100%", marginTop: 16 },
+  modalActionFlex: { flex: 1 },
+  modalButton: { height: 48, alignItems: "center", justifyContent: "center", borderRadius: radius.md },
+  modalCancelButton: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.line },
+  modalConfirmText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  modalCancelText: { color: colors.sub, fontWeight: "600", fontSize: 15 },
 });

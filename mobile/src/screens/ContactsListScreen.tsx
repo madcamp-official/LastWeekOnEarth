@@ -10,6 +10,7 @@ import { confirmAction } from "../utils/confirm";
 import { GroupIcon, InboxIcon, PlusIcon, SearchIcon, TrashIcon } from "../components/Icon";
 import { KeyboardAvoidingScreen } from "../components/KeyboardAvoidingScreen";
 import { SolidButtonView } from "../components/SolidButtonView";
+import { useTabBarHeight } from "../hooks/useTabBarHeight";
 import { colors, radius, spacing } from "../theme/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactsList">;
@@ -46,6 +47,7 @@ function lastContactColor(days: number | null): string {
 
 export function ContactsListScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useTabBarHeight();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [groups, setGroups] = useState<ContactGroup[]>([]);
   const [membership, setMembership] = useState<Record<string, Set<string>>>({});
@@ -172,7 +174,7 @@ export function ContactsListScreen({ navigation }: Props) {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight }]}
         refreshing={loading}
         onRefresh={load}
         ListEmptyComponent={
