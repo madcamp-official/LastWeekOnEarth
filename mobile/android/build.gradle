@@ -39,3 +39,20 @@ allprojects {
         maven { url 'https://www.jitpack.io' }
     }
 }
+
+// react-native-ble-advertiser가 자체 android/build.gradle에 compileSdkVersion 28을
+// 하드코딩해둬서, 이 프로젝트의 AGP 8.6.0(compileSdkVersion 35 요구)과 충돌해
+// "In order to compile Java 9+ source, please set compileSdkVersion to 30 or above" 에러가 났다.
+// node_modules 안이라 직접 못 고치므로, 루트에서 이 서브프로젝트의 SDK 버전만 덮어쓴다.
+subprojects { subproject ->
+    if (subproject.name == 'react-native-ble-advertiser') {
+        subproject.afterEvaluate {
+            if (subproject.hasProperty('android')) {
+                android {
+                    compileSdkVersion 35
+                    buildToolsVersion "35.0.0"
+                }
+            }
+        }
+    }
+}
