@@ -1,22 +1,19 @@
-FROM node:20-alpine AS base
+FROM node:20-slim
 WORKDIR /app
-RUN apk add --no-cache openssl
 
-FROM base AS deps
+# 시스템 빌드 도구 설치
+RUN apt-get update && apt-get install -y python3 make g++ openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 1. package.json 관련 파일 먼저 복사 후 의존성 설치
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
-FROM deps AS build
+# 2. 나머지 소스 코드 및 프리즘 스키마 복사
 COPY . .
+
 RUN npx prisma generate
 RUN npm run build
-
-FROM base AS runtime
-ENV NODE_ENV=production
-COPY package.json package-lock.json* ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/prisma ./prisma
 
 EXPOSE 4000
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

@@ -9,8 +9,7 @@ services:
     environment:
       DATABASE_URL: file:/data/anchora.db
       NODE_ENV: production
-    # Caddy가 유일한 외부 진입점이 되므로 호스트에 직접 포트를 열지 않는다
-    # (Gmail OAuth가 https://172.10.7.202.nip.io를 통해서만 들어오게 강제).
+    # cloudflared가 유일한 외부 진입점이 되므로 호스트에 직접 포트를 열지 않는다.
     volumes:
       - backend-data:/data
     healthcheck:
@@ -26,24 +25,16 @@ services:
       retries: 10
       start_period: 15s
 
-  # https://172.10.7.202.nip.io 로 들어오는 요청을 backend:4000으로 리버스 프록시하면서
-  # Let's Encrypt 인증서를 자동으로 발급/갱신한다. Gmail의 gmail.send는 민감한 스코프라
-  # 구글이 OAuth redirect_uri에 https://를 요구하기 때문에 필요해졌다 (backend/.env의
-  # GOOGLE_OAUTH_REDIRECT_URI 참고). ACME 인증을 위해 80/443이 외부에서 열려있어야 한다.
-  caddy:
-    image: caddy:2-alpine
+  # KAIST 캠퍼스 네트워크가 인바운드/아웃바운드 임의 접속을 막고 있어 Let's Encrypt(Caddy)의
+  # ACME 검증(80/443 인바운드 필요)이 실패한다. cloudflared는 반대로 VM -> Cloudflare
+  # 아웃바운드 연결만 필요해서 이 제약을 우회할 수 있다. Quick Tunnel이라 매번 랜덤
+  # https://xxxx.trycloudflare.com 주소를 받는다 (재시작 전까진 고정).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
-      - caddy-config:/config
+    command: tunnel --no-autoupdate --url http://backend:4000
 
 volumes:
   backend-data:
-  caddy-data:
-  caddy-config:
