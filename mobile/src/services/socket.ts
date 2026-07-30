@@ -4,7 +4,7 @@ import { useAuthStore } from "../store/useAuthStore";
 
 // Socket.IO는 Express의 /api 라우터가 아니라 그 밑의 http.Server 자체에 붙어있어서,
 // API_BASE_URL에서 /api 접미사를 떼어낸 호스트로 접속해야 한다.
-const SOCKET_URL = (Config.API_BASE_URL ?? "http://localhost:4000/api").replace(/\/api\/?$/, "");
+const SOCKET_URL = Config.API_BASE_URL.replace(/\/api\/?$/, "");
 
 let socket: Socket | null = null;
 

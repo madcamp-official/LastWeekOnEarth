@@ -3,7 +3,7 @@ import Config from "../config";
 import { useAuthStore } from "../store/useAuthStore";
 
 export const api = axios.create({
-  baseURL: Config.API_BASE_URL ?? "http://localhost:4000/api",
+  baseURL: Config.API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -25,7 +25,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
   try {
     const { data } = await axios.post<{ accessToken: string; refreshToken: string }>(
-      `${Config.API_BASE_URL ?? "http://localhost:4000/api"}/auth/refresh`,
+      `${Config.API_BASE_URL}/auth/refresh`,
       { refreshToken },
     );
     const user = useAuthStore.getState().user;
